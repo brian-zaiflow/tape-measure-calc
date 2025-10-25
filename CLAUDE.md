@@ -84,6 +84,11 @@ Serves the built static files locally for testing.
 
 **Pages:**
 - `calculator.tsx`: Main arithmetic calculator with operation buttons and quick fraction shortcuts
+  - Collapsible header with settings (collapsed by default to fit on phone screens)
+  - Precision toggle: 1/16" or 1/32"
+  - Display mode: Fraction or Decimal
+  - Reduce toggle: Reduce fractions or show exact values
+  - Compact layout optimized for iPhone screens
 - `intervals.tsx`: Tape measure interval generator with two modes:
   - Divide mode: Divide a total length into N equal parts with optional offset
   - Custom mode: Generate marks at custom intervals starting from a custom point
@@ -100,24 +105,28 @@ This is a 100% client-side application:
 
 **Per design_guidelines.md:**
 - Mobile-first with max-width: 768px
-- Large touch targets (minimum 64px height) for glove operation
+- Optimized for iPhone screens - compact layout fits on standard phone screen without scrolling
+- Large touch targets (minimum 56px/14rem height) for glove operation
 - Monospace fonts (SF Mono, Consolas) for numerical displays
 - High contrast for outdoor visibility
 - Professional tool aesthetic (not consumer app)
-- Tailwind spacing units: 2, 4, 6, 8
+- Compact spacing for mobile: gaps of 1.5 (6px), padding reduced throughout
 - Two-line calculator display: history + current result
 
 **Typography:**
-- Display results: text-5xl to text-6xl, font-bold (48-60px)
+- Display results: text-4xl, font-bold (36px) - optimized for mobile screens
 - Input display: text-3xl to text-4xl
 - Button labels: text-xl
-- Helper text: text-sm
+- Helper text: text-xs to text-sm
 
 **Components:**
-- Result display: monospace, right-aligned, min-height h-32
-- Calculator grid: 4-column layout with large buttons
-- Quick fraction buttons: 1/2", 1/4", 3/4", 1/8" for common measurements
+- Result display: monospace, right-aligned, min-height h-28 (112px)
+- Calculator grid: 4-column layout with compact buttons (min-h-14)
+- Quick fraction buttons: 15 buttons in 5x3 grid for all common 16ths
 - Operations: vertical alignment on right (traditional calculator layout)
+- Collapsible header: Settings and title hidden by default to maximize screen space
+  - Toggle with Settings button at top of screen
+  - Contains: title, precision settings (1/16" vs 1/32"), display mode (fraction vs decimal), reduce toggle
 
 ## Type System
 
@@ -133,7 +142,26 @@ This is a 100% client-side application:
 
 ## Testing
 
-No test framework currently configured. Tests would need to be set up if required.
+**Test framework:** Vitest with React Testing Library and happy-dom
+
+**Running tests:**
+```bash
+npm test              # Run tests in watch mode
+npm test -- --run     # Run tests once
+npm run test:ui       # Open Vitest UI
+npm run test:coverage # Run with coverage report
+```
+
+**Test files:**
+- `client/src/lib/fraction-math.test.ts` - 54 tests covering all core arithmetic operations
+- `client/src/lib/intervals.test.ts` - 12 tests covering divide mode and custom interval mode
+
+**Test coverage:**
+- All fraction math operations (add, subtract, multiply, divide)
+- Input parsing (feet notation, fractions, mixed measurements)
+- Rounding behavior (1/16" and 1/32" precision)
+- Fraction reduction
+- Intervals calculator logic (both divide and custom modes)
 
 ## Key Implementation Notes
 

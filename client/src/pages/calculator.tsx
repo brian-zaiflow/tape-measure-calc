@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link } from "wouter";
 import type {
   CalculatorState,
@@ -15,7 +16,7 @@ import {
   toDecimalInches,
   toImperialMeasurement
 } from "@/lib/fraction-math";
-import { Delete, Plus, Minus, Divide, X, Ruler } from "lucide-react";
+import { Delete, Plus, Minus, Divide, X, Ruler, Settings, ChevronDown } from "lucide-react";
 
 type DisplayMode = "fraction" | "decimal";
 type Precision = 16 | 32;
@@ -33,6 +34,7 @@ export default function Calculator() {
   const [displayMode, setDisplayMode] = useState<DisplayMode>("fraction");
   const [precision, setPrecision] = useState<Precision>(16);
   const [reduceFractions, setReduceFractions] = useState<boolean>(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Reformat display when precision or reduce setting changes
   useEffect(() => {
@@ -215,93 +217,103 @@ export default function Calculator() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex justify-end mb-2">
+    <div className="min-h-screen bg-background flex flex-col p-3 pb-4">
+      <div className="w-full max-w-md mx-auto flex flex-col h-full">
+        {/* Collapsible Header & Settings */}
+        <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen} className="mb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2">
+                <Settings className="w-4 h-4" />
+                <span className="text-xs font-semibold">Settings</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
             <Link href="/intervals">
-              <Button variant="ghost" size="sm">
-                <Ruler className="w-4 h-4 mr-2" />
-                Intervals
+              <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Ruler className="w-4 h-4 mr-1" />
+                <span className="text-xs">Intervals</span>
               </Button>
             </Link>
           </div>
-          <div className="text-center mb-4">
-            <h1 className="text-2xl font-semibold text-foreground mb-1">
-              Tape Measure Calculator
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Inches & Fractions Calculator
-            </p>
-          </div>
 
-          {/* Settings Controls */}
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-1 bg-muted rounded-md p-1">
-              <Button
-                variant={displayMode === 'fraction' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setDisplayMode('fraction')}
-                className="text-xs px-3 flex-1"
-              >
-                Fraction
-              </Button>
-              <Button
-                variant={displayMode === 'decimal' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setDisplayMode('decimal')}
-                className="text-xs px-3 flex-1"
-              >
-                Decimal
-              </Button>
+          <CollapsibleContent className="mt-3 space-y-3">
+            <div className="text-center">
+              <h1 className="text-xl font-semibold text-foreground">
+                Tape Measure Calculator
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Inches & Fractions Calculator
+              </p>
             </div>
 
-            <div className="flex gap-2">
-              <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
+            {/* Settings Controls */}
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-1 bg-muted rounded-md p-1">
                 <Button
-                  variant={precision === 16 ? 'default' : 'ghost'}
+                  variant={displayMode === 'fraction' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setPrecision(16)}
+                  onClick={() => setDisplayMode('fraction')}
                   className="text-xs px-3 flex-1"
                 >
-                  1/16"
+                  Fraction
                 </Button>
                 <Button
-                  variant={precision === 32 ? 'default' : 'ghost'}
+                  variant={displayMode === 'decimal' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setPrecision(32)}
+                  onClick={() => setDisplayMode('decimal')}
                   className="text-xs px-3 flex-1"
                 >
-                  1/32"
+                  Decimal
                 </Button>
               </div>
 
-              <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
-                <Button
-                  variant={reduceFractions ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setReduceFractions(true)}
-                  className="text-xs px-3 flex-1"
-                >
-                  Reduce
-                </Button>
-                <Button
-                  variant={!reduceFractions ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setReduceFractions(false)}
-                  className="text-xs px-3 flex-1"
-                >
-                  Exact
-                </Button>
+              <div className="flex gap-2">
+                <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
+                  <Button
+                    variant={precision === 16 ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setPrecision(16)}
+                    className="text-xs px-3 flex-1"
+                  >
+                    1/16"
+                  </Button>
+                  <Button
+                    variant={precision === 32 ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setPrecision(32)}
+                    className="text-xs px-3 flex-1"
+                  >
+                    1/32"
+                  </Button>
+                </div>
+
+                <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
+                  <Button
+                    variant={reduceFractions ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setReduceFractions(true)}
+                    className="text-xs px-3 flex-1"
+                  >
+                    Reduce
+                  </Button>
+                  <Button
+                    variant={!reduceFractions ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setReduceFractions(false)}
+                    className="text-xs px-3 flex-1"
+                  >
+                    Exact
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-        <Card className="p-6 shadow-lg">
+        <Card className="p-4 shadow-lg flex-1 flex flex-col">
           {/* Display */}
-          <div className="mb-6 bg-gradient-to-br from-muted/50 to-muted rounded-lg p-6 min-h-36 flex flex-col justify-end border-2 border-border/50">
+          <div className="mb-4 bg-gradient-to-br from-muted/50 to-muted rounded-lg p-4 min-h-28 flex flex-col justify-end border-2 border-border/50">
             {showOperation && (
               <div className="text-base text-muted-foreground font-mono mb-2 text-right" data-testid="text-previous-value">
                 {displayMode === 'decimal'
@@ -316,7 +328,7 @@ export default function Calculator() {
               </div>
             )}
             <div
-              className="text-5xl font-bold text-foreground font-mono text-right break-all"
+              className="text-4xl font-bold text-foreground font-mono text-right break-all"
               data-testid="text-display"
             >
               {formatDisplay(currentDisplay)}
@@ -324,12 +336,12 @@ export default function Calculator() {
           </div>
 
           {/* Calculator Grid */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1.5">
             {/* First Row: Clear, Delete, and Operations */}
             <Button
               variant="destructive"
               onClick={handleClear}
-              className="min-h-16 text-lg font-semibold"
+              className="min-h-14 text-lg font-semibold"
               data-testid="button-clear"
             >
               C
@@ -337,7 +349,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={handleDelete}
-              className="min-h-16"
+              className="min-h-14"
               data-testid="button-delete"
             >
               <Delete className="w-5 h-5" />
@@ -345,7 +357,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={() => handleSymbolClick('.')}
-              className="min-h-16 text-lg font-semibold"
+              className="min-h-14 text-lg font-semibold"
               data-testid="button-decimal"
             >
               .
@@ -353,7 +365,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'divide' ? 'default' : 'secondary'}
               onClick={() => handleOperation('divide')}
-              className="min-h-16"
+              className="min-h-14"
               data-testid="button-divide"
             >
               <Divide className="w-5 h-5" />
@@ -363,7 +375,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('7')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-7"
             >
               7
@@ -371,7 +383,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('8')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-8"
             >
               8
@@ -379,7 +391,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('9')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-9"
             >
               9
@@ -387,7 +399,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'multiply' ? 'default' : 'secondary'}
               onClick={() => handleOperation('multiply')}
-              className="min-h-16"
+              className="min-h-14"
               data-testid="button-multiply"
             >
               <X className="w-5 h-5" />
@@ -396,7 +408,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('4')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-4"
             >
               4
@@ -404,7 +416,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('5')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-5"
             >
               5
@@ -412,7 +424,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('6')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-6"
             >
               6
@@ -420,7 +432,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'subtract' ? 'default' : 'secondary'}
               onClick={() => handleOperation('subtract')}
-              className="min-h-16"
+              className="min-h-14"
               data-testid="button-subtract"
             >
               <Minus className="w-5 h-5" />
@@ -429,7 +441,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('1')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-1"
             >
               1
@@ -437,7 +449,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('2')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-2"
             >
               2
@@ -445,7 +457,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('3')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-3"
             >
               3
@@ -453,7 +465,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'add' ? 'default' : 'secondary'}
               onClick={() => handleOperation('add')}
-              className="min-h-16"
+              className="min-h-14"
               data-testid="button-add"
             >
               <Plus className="w-5 h-5" />
@@ -462,7 +474,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('0')}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-0"
             >
               0
@@ -470,7 +482,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={() => handleSymbolClick('/')}
-              className="min-h-16 text-lg font-semibold"
+              className="min-h-14 text-lg font-semibold"
               data-testid="button-fraction"
             >
               /
@@ -478,7 +490,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={() => handleSymbolClick('"')}
-              className="min-h-16 text-lg font-semibold"
+              className="min-h-14 text-lg font-semibold"
               data-testid="button-inches"
             >
               "
@@ -486,7 +498,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={() => handleSymbolClick(' ')}
-              className="min-h-16 text-sm font-semibold"
+              className="min-h-14 text-sm font-semibold"
               data-testid="button-space"
             >
               Space
@@ -494,11 +506,11 @@ export default function Calculator() {
           </div>
 
           {/* Second Grid - Equals Button */}
-          <div className="mt-3">
+          <div className="mt-2">
             <Button
               variant="default"
               onClick={handleEquals}
-              className="min-h-16 text-2xl font-bold w-full bg-primary hover:bg-primary/90 shadow-md"
+              className="min-h-14 text-2xl font-bold w-full bg-primary hover:bg-primary/90 shadow-md"
               data-testid="button-equals"
             >
               =
@@ -506,39 +518,30 @@ export default function Calculator() {
           </div>
 
           {/* Quick Fraction Buttons - All reduced fractions from 1/16 to 15/16 */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick Fractions</h3>
-              <div className="flex-1 h-px bg-border ml-3"></div>
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Quick Fractions</h3>
+              <div className="flex-1 h-px bg-border ml-2"></div>
             </div>
-            <div className="grid grid-cols-5 gap-2">
-            <Button variant="outline" onClick={() => handleSymbolClick('1/16"')} className="min-h-12 text-sm hover:bg-accent">1/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/8"')} className="min-h-12 text-sm hover:bg-accent">1/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/16"')} className="min-h-12 text-sm hover:bg-accent">3/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/4"')} className="min-h-12 text-sm hover:bg-accent">1/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/16"')} className="min-h-12 text-sm hover:bg-accent">5/16"</Button>
+            <div className="grid grid-cols-5 gap-1.5">
+            <Button variant="outline" onClick={() => handleSymbolClick('1/16"')} className="min-h-10 text-xs hover:bg-accent">1/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/8"')} className="min-h-10 text-xs hover:bg-accent">1/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/16"')} className="min-h-10 text-xs hover:bg-accent">3/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/4"')} className="min-h-10 text-xs hover:bg-accent">1/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/16"')} className="min-h-10 text-xs hover:bg-accent">5/16"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('3/8"')} className="min-h-12 text-sm hover:bg-accent">3/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/16"')} className="min-h-12 text-sm hover:bg-accent">7/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/2"')} className="min-h-12 text-sm hover:bg-accent">1/2"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('9/16"')} className="min-h-12 text-sm hover:bg-accent">9/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/8"')} className="min-h-12 text-sm hover:bg-accent">5/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/8"')} className="min-h-10 text-xs hover:bg-accent">3/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/16"')} className="min-h-10 text-xs hover:bg-accent">7/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/2"')} className="min-h-10 text-xs hover:bg-accent">1/2"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('9/16"')} className="min-h-10 text-xs hover:bg-accent">9/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/8"')} className="min-h-10 text-xs hover:bg-accent">5/8"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('11/16"')} className="min-h-12 text-sm hover:bg-accent">11/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/4"')} className="min-h-12 text-sm hover:bg-accent">3/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('13/16"')} className="min-h-12 text-sm hover:bg-accent">13/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/8"')} className="min-h-12 text-sm hover:bg-accent">7/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('15/16"')} className="min-h-12 text-sm hover:bg-accent">15/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('11/16"')} className="min-h-10 text-xs hover:bg-accent">11/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/4"')} className="min-h-10 text-xs hover:bg-accent">3/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('13/16"')} className="min-h-10 text-xs hover:bg-accent">13/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/8"')} className="min-h-10 text-xs hover:bg-accent">7/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('15/16"')} className="min-h-10 text-xs hover:bg-accent">15/16"</Button>
             </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="mt-6 p-4 bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg border border-border/30">
-            <p className="text-xs text-muted-foreground text-center leading-relaxed">
-              Enter measurements like: <span className="font-mono font-semibold text-foreground">3 1/2"</span>
-              <br />
-              <span className="text-[10px]">Use buttons to enter inches (") and fractions (/)</span>
-            </p>
           </div>
         </Card>
       </div>
