@@ -23,7 +23,11 @@ The repository includes a GitHub Actions workflow that automatically deploys to 
 
 3. **Access your site:**
    - Once deployed, your site will be available at:
-   - `https://<your-username>.github.io/<repository-name>/`
+   - `https://<your-username>.github.io/tape-measure-calc/`
+
+**Important:** If you rename the repository or deploy to a custom domain, update the `base` path in `vite.config.ts`:
+- For `username.github.io/repo-name/` → set `base: '/repo-name/'`
+- For custom domain or `username.github.io` → set `base: '/'`
 
 ## Manual Deployment
 
