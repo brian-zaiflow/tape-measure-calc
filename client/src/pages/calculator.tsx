@@ -9,12 +9,15 @@ import type {
 } from "@/types";
 import {
   formatImperialMeasurement,
+  formatAsDecimal,
   parseInput,
   performOperation,
   toDecimalInches,
   toImperialMeasurement
 } from "@/lib/fraction-math";
 import { Delete, Plus, Minus, Divide, X, Ruler } from "lucide-react";
+
+type DisplayMode = "fraction" | "decimal";
 
 export default function Calculator() {
   const [state, setState] = useState<CalculatorState>({
@@ -24,6 +27,8 @@ export default function Calculator() {
     operation: 'none',
     shouldResetInput: false,
   });
+
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("fraction");
 
   const handleNumberClick = (num: string) => {
     if (state.shouldResetInput) {
@@ -41,10 +46,19 @@ export default function Calculator() {
   };
 
   const handleSymbolClick = (symbol: string) => {
-    setState(prev => ({
-      ...prev,
-      currentInput: prev.currentInput + symbol,
-    }));
+    setState(prev => {
+      let newInput = prev.currentInput;
+
+      // If clicking a fraction and current input ends with a digit, add space first
+      if (symbol.includes('/') && /\d$/.test(newInput)) {
+        newInput += ' ';
+      }
+
+      return {
+        ...prev,
+        currentInput: newInput + symbol,
+      };
+    });
   };
 
   const handleClear = () => {
@@ -161,12 +175,41 @@ export default function Calculator() {
   const currentDisplay = state.currentInput || state.displayValue;
   const showOperation = state.operation !== 'none' && state.previousValue;
 
+  // Format display based on mode
+  const formatDisplay = (value: string): string => {
+    if (displayMode === 'decimal') {
+      const parsed = parseInput(value);
+      if (parsed) {
+        return formatAsDecimal(parsed);
+      }
+    }
+    return value;
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex justify-end mb-2">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex gap-1 bg-muted rounded-md p-1">
+              <Button
+                variant={displayMode === 'fraction' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDisplayMode('fraction')}
+                className="text-xs px-3"
+              >
+                Fraction
+              </Button>
+              <Button
+                variant={displayMode === 'decimal' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDisplayMode('decimal')}
+                className="text-xs px-3"
+              >
+                Decimal
+              </Button>
+            </div>
             <Link href="/intervals">
               <Button variant="ghost" size="sm">
                 <Ruler className="w-4 h-4 mr-2" />
@@ -184,12 +227,15 @@ export default function Calculator() {
           </div>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 shadow-lg">
           {/* Display */}
-          <div className="mb-4 bg-muted rounded-md p-4 min-h-32 flex flex-col justify-end">
+          <div className="mb-6 bg-gradient-to-br from-muted/50 to-muted rounded-lg p-6 min-h-36 flex flex-col justify-end border-2 border-border/50">
             {showOperation && (
-              <div className="text-sm text-muted-foreground font-mono mb-1 text-right" data-testid="text-previous-value">
-                {formatImperialMeasurement(state.previousValue!)} {
+              <div className="text-base text-muted-foreground font-mono mb-2 text-right" data-testid="text-previous-value">
+                {displayMode === 'decimal'
+                  ? formatAsDecimal(state.previousValue!)
+                  : formatImperialMeasurement(state.previousValue!)
+                } {
                   state.operation === 'add' ? '+' :
                   state.operation === 'subtract' ? '−' :
                   state.operation === 'multiply' ? '×' :
@@ -197,11 +243,11 @@ export default function Calculator() {
                 }
               </div>
             )}
-            <div 
-              className="text-4xl font-bold text-foreground font-mono text-right break-all"
+            <div
+              className="text-5xl font-bold text-foreground font-mono text-right break-all"
               data-testid="text-display"
             >
-              {currentDisplay}
+              {formatDisplay(currentDisplay)}
             </div>
           </div>
 
@@ -376,11 +422,11 @@ export default function Calculator() {
           </div>
 
           {/* Second Grid - Equals Button */}
-          <div className="mt-2">
+          <div className="mt-3">
             <Button
               variant="default"
               onClick={handleEquals}
-              className="min-h-16 text-xl font-semibold w-full"
+              className="min-h-16 text-2xl font-bold w-full bg-primary hover:bg-primary/90 shadow-md"
               data-testid="button-equals"
             >
               =
@@ -388,32 +434,38 @@ export default function Calculator() {
           </div>
 
           {/* Quick Fraction Buttons - All reduced fractions from 1/16 to 15/16 */}
-          <div className="mt-4 grid grid-cols-5 gap-2">
-            <Button variant="outline" onClick={() => handleSymbolClick('1/16"')} className="min-h-12 text-sm">1/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/8"')} className="min-h-12 text-sm">1/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/16"')} className="min-h-12 text-sm">3/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/4"')} className="min-h-12 text-sm">1/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/16"')} className="min-h-12 text-sm">5/16"</Button>
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Quick Fractions</h3>
+              <div className="flex-1 h-px bg-border ml-3"></div>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+            <Button variant="outline" onClick={() => handleSymbolClick('1/16"')} className="min-h-12 text-sm hover:bg-accent">1/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/8"')} className="min-h-12 text-sm hover:bg-accent">1/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/16"')} className="min-h-12 text-sm hover:bg-accent">3/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/4"')} className="min-h-12 text-sm hover:bg-accent">1/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/16"')} className="min-h-12 text-sm hover:bg-accent">5/16"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('3/8"')} className="min-h-12 text-sm">3/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/16"')} className="min-h-12 text-sm">7/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/2"')} className="min-h-12 text-sm">1/2"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('9/16"')} className="min-h-12 text-sm">9/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/8"')} className="min-h-12 text-sm">5/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/8"')} className="min-h-12 text-sm hover:bg-accent">3/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/16"')} className="min-h-12 text-sm hover:bg-accent">7/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/2"')} className="min-h-12 text-sm hover:bg-accent">1/2"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('9/16"')} className="min-h-12 text-sm hover:bg-accent">9/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/8"')} className="min-h-12 text-sm hover:bg-accent">5/8"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('11/16"')} className="min-h-12 text-sm">11/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/4"')} className="min-h-12 text-sm">3/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('13/16"')} className="min-h-12 text-sm">13/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/8"')} className="min-h-12 text-sm">7/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('15/16"')} className="min-h-12 text-sm">15/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('11/16"')} className="min-h-12 text-sm hover:bg-accent">11/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/4"')} className="min-h-12 text-sm hover:bg-accent">3/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('13/16"')} className="min-h-12 text-sm hover:bg-accent">13/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/8"')} className="min-h-12 text-sm hover:bg-accent">7/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('15/16"')} className="min-h-12 text-sm hover:bg-accent">15/16"</Button>
+            </div>
           </div>
 
           {/* Instructions */}
-          <div className="mt-6 p-4 bg-muted/50 rounded-md">
-            <p className="text-xs text-muted-foreground text-center">
+          <div className="mt-6 p-4 bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg border border-border/30">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
               Enter measurements like: <span className="font-mono font-semibold text-foreground">3 1/2"</span>
               <br />
-              Use buttons to enter inches (") and fractions (/)
+              <span className="text-[10px]">Use buttons to enter inches (") and fractions (/)</span>
             </p>
           </div>
         </Card>

@@ -100,6 +100,20 @@ export function formatImperialMeasurement(measurement: ImperialMeasurement): str
   return parts.join(' ') + '"';
 }
 
+// Format imperial measurement as decimal
+export function formatAsDecimal(measurement: ImperialMeasurement): string {
+  const decimalInches = toDecimalInches(measurement);
+
+  // Handle zero case
+  if (decimalInches === 0) {
+    return '0.0"';
+  }
+
+  // Round to 4 decimal places for display
+  const rounded = Math.round(decimalInches * 10000) / 10000;
+  return `${rounded}"`;
+}
+
 // Parse input string to imperial measurement (inches and fractions only)
 // Also supports feet notation for convenience (converts to inches)
 export function parseInput(input: string): ImperialMeasurement | null {
