@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
@@ -6,7 +7,8 @@ import {
   PrecisionType, 
   DisplayFormat, 
   OperationType,
-  ImperialMeasurement 
+  ImperialMeasurement,
+  type CalculationHistory
 } from "@shared/schema";
 import { 
   formatImperialMeasurement, 
@@ -15,7 +17,13 @@ import {
   toDecimalInches,
   toImperialMeasurement
 } from "@/lib/fraction-math";
-import { Delete, Plus, Minus, Divide, X } from "lucide-react";
+import { Delete, Plus, Minus, Divide, X, Clock } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function Calculator() {
   const [state, setState] = useState<CalculatorState>({
@@ -26,6 +34,27 @@ export default function Calculator() {
     precision: 'sixteenth',
     displayFormat: 'reduced',
     shouldResetInput: false,
+  });
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Fetch calculation history
+  const { data: history = [] } = useQuery<CalculationHistory[]>({
+    queryKey: ['/api/history'],
+  });
+
+  // Save calculation history mutation
+  const saveHistory = useMutation({
+    mutationFn: async (data: { expression: string; result: string; operation: string }) => {
+      return apiRequest('/api/history', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/history'] });
+    },
   });
 
   const handleNumberClick = (num: string) => {
@@ -144,6 +173,22 @@ export default function Calculator() {
         state.precision
       );
       const formatted = formatImperialMeasurement(result, state.displayFormat);
+      
+      // Save to history
+      const leftFormatted = formatImperialMeasurement(state.previousValue, state.displayFormat);
+      const rightFormatted = formatImperialMeasurement(parsed, state.displayFormat);
+      const opSymbol = 
+        state.operation === 'add' ? '+' :
+        state.operation === 'subtract' ? '−' :
+        state.operation === 'multiply' ? '×' :
+        state.operation === 'divide' ? '÷' : '';
+      const expression = `${leftFormatted} ${opSymbol} ${rightFormatted}`;
+      
+      saveHistory.mutate({
+        expression,
+        result: formatted,
+        operation: state.operation,
+      });
       
       setState(prev => ({
         ...prev,
@@ -491,6 +536,55 @@ export default function Calculator() {
               Use buttons or type feet ('), inches ("), and fractions (/)
             </p>
           </div>
+
+          {/* Calculation History */}
+          <Collapsible
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            className="mt-6"
+          >
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2"
+                data-testid="button-toggle-history"
+              >
+                <Clock className="w-4 h-4" />
+                Calculation History
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-2">
+              {history.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No calculation history yet
+                </p>
+              ) : (
+                history.slice(0, 10).map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 bg-muted/50 rounded-md hover-elevate active-elevate-2 cursor-pointer transition-colors"
+                    onClick={() => {
+                      setState(prev => ({
+                        ...prev,
+                        displayValue: item.result,
+                        currentInput: "",
+                        previousValue: null,
+                        operation: 'none',
+                        shouldResetInput: true,
+                      }));
+                    }}
+                    data-testid={`history-item-${item.id}`}
+                  >
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="font-mono text-sm text-foreground">
+                        {item.expression} = <span className="font-semibold">{item.result}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
       </div>
     </div>
