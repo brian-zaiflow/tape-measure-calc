@@ -31,13 +31,13 @@ To build and preview locally before deploying:
 
 ```bash
 # Build static files
-npm run build:static
+npm run build
 
 # Preview the build locally
 npm run preview
 ```
 
-The built files will be in `dist/public/` directory.
+The built files will be in `dist/` directory.
 
 ## How it works
 
@@ -54,4 +54,4 @@ For local development with the dev server:
 npm run dev
 ```
 
-This runs the full stack (Express + Vite) on port 3000.
+This runs the Vite dev server on port 5173 (default Vite port).

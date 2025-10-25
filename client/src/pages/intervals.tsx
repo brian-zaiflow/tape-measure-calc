@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import { Calculator, ArrowLeft } from "lucide-react";
-import type { ImperialMeasurement } from "@shared/schema";
+import type { ImperialMeasurement } from "@/types";
 import {
   parseInput,
   formatImperialMeasurement,

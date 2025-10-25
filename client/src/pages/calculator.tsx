@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "wouter";
-import {
+import type {
   CalculatorState,
   OperationType,
   ImperialMeasurement
-} from "@shared/schema";
+} from "@/types";
 import {
   formatImperialMeasurement,
   parseInput,

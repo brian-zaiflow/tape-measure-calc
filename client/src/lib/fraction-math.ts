@@ -1,4 +1,4 @@
-import type { ImperialMeasurement } from "@shared/schema";
+import type { ImperialMeasurement } from "@/types";
 
 // Convert imperial measurement to decimal inches
 export function toDecimalInches(measurement: ImperialMeasurement): number {

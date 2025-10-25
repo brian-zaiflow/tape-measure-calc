@@ -14,7 +14,7 @@ An imperial tape measure calculator designed for construction professionals. Mob
 ```bash
 npm run dev
 ```
-Runs both Vite dev server (frontend) and Express server (backend) with HMR on port 5000 (or PORT env var).
+Runs Vite dev server on port 5173 with HMR.
 
 **Type checking:**
 ```bash
@@ -26,19 +26,13 @@ Runs TypeScript compiler in check mode without emitting files.
 ```bash
 npm run build
 ```
-Compiles client with Vite and bundles server with esbuild to `dist/` directory.
+Builds static files to `dist/` directory.
 
-**Start production server:**
+**Preview production build:**
 ```bash
-npm start
+npm run preview
 ```
-Runs the built application from `dist/index.js`.
-
-**Database schema push:**
-```bash
-npm run db:push
-```
-Pushes Drizzle schema to database (PostgreSQL setup is configured but currently using in-memory storage).
+Serves the built static files locally for testing.
 
 ## Architecture
 
@@ -57,9 +51,10 @@ Pushes Drizzle schema to database (PostgreSQL setup is configured but currently 
 - `formatImperialMeasurement()`: converts to display string (always shows inches only, e.g., "63 1/2"")
 - `parseInput()`: parses multiple formats including feet notation (e.g., "5' 3 1/2"", "8'", "3 1/2"") - feet are converted to inches internally for storage/display
 
-**Calculator state** (`shared/schema.ts`):
+**Calculator state** (`client/src/types/index.ts`):
 - `CalculatorState` tracks: currentInput, displayValue, previousValue, operation, shouldResetInput
 - `OperationType`: 'add' | 'subtract' | 'multiply' | 'divide' | 'none'
+- `ImperialMeasurement` type definition
 - No precision or display format settings - always uses 1/16" with reduced fractions
 
 ### Frontend Structure
@@ -89,25 +84,13 @@ Pushes Drizzle schema to database (PostgreSQL setup is configured but currently 
   - Divide mode: Divide a total length into N equal parts with optional offset
   - Custom mode: Generate marks at custom intervals starting from a custom point
 
-### Backend Structure
+### Pure Static Site
 
-**Server setup** (`server/index.ts`):
-- Express.js with ESM modules
-- Middleware: body parsing (json + urlencoded), request logging for /api routes
-- Error handling middleware catches all errors
-- Development: Vite middleware with HMR
-- Production: serves static files from dist/
-
-**API endpoints** (`server/routes.ts`):
-- Currently minimal, placeholder for future API routes
-- All routes should be prefixed with `/api`
-- Storage interface available via `storage` export
-
-**Storage** (`server/storage.ts`):
-- `IStorage` interface defines contract
-- `MemStorage` provides in-memory implementation (current default)
-- PostgreSQL/Drizzle setup configured but not actively used
-- User model exists with UUID-based IDs
+This is a 100% client-side application:
+- No backend server required
+- No database or API calls
+- All calculation logic runs in the browser
+- Perfect for hosting on GitHub Pages or any static hosting service
 
 ### Design System
 
@@ -134,10 +117,10 @@ Pushes Drizzle schema to database (PostgreSQL setup is configured but currently 
 
 ## Type System
 
-**Shared schemas** (`shared/schema.ts`):
-- Use Zod for runtime validation of enums
+**Types** (`client/src/types/index.ts`):
+- Use Zod for runtime validation of enums (OperationType)
 - TypeScript interfaces for complex types (ImperialMeasurement, CalculatorState)
-- Shared between client and server for type safety
+- All types are client-side only
 
 **Type checking:**
 - Run `npm run check` before committing
@@ -148,20 +131,17 @@ Pushes Drizzle schema to database (PostgreSQL setup is configured but currently 
 
 No test framework currently configured. Tests would need to be set up if required.
 
-## Database
-
-Drizzle ORM configured for PostgreSQL but not actively used:
-- Schema defined but storage is in-memory by default
-- Connection config in `drizzle.config.ts`
-- Use `npm run db:push` to sync schema if switching to PostgreSQL
-- User model available with UUID IDs, username, and password fields
-
 ## Key Implementation Notes
 
 1. **Fraction arithmetic is the core complexity**: all calculations flow through decimal conversion, operation, then back to imperial with 1/16" rounding
-2. **Simplified architecture**: No feet (inches only), no negative numbers, fixed 1/16" precision, always reduced fractions
-3. **No backend API currently**: this is a pure frontend calculator, routes.ts is mostly empty
-4. **Recent changes**:
-   - Commit df58c2d removed calculation history and backend API features
-   - Commit 2a616af added multiply operation
-   - Simplified to inches-only with fixed 1/16" precision and always-reduced fractions
+2. **Simplified architecture**: Display shows inches only (no feet in output), no negative numbers, fixed 1/16" precision, always reduced fractions
+3. **Input parsing accepts feet notation**: Users can input "5' 3 1/2"" which is converted to "63 1/2"" internally and for display
+4. **Pure static site**: 100% client-side, no backend, perfect for GitHub Pages
+5. **Two-page application**: Calculator (/) and Intervals (/intervals) with client-side routing
+
+## Deployment
+
+See `DEPLOY.md` for GitHub Pages deployment instructions. The app is configured with:
+- GitHub Actions workflow for automatic deployment
+- 404.html redirect trick for client-side routing
+- Static build outputs to `dist/` directory
