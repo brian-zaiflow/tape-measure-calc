@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "wouter";
@@ -18,17 +18,35 @@ import {
 import { Delete, Plus, Minus, Divide, X, Ruler } from "lucide-react";
 
 type DisplayMode = "fraction" | "decimal";
+type Precision = 16 | 32;
 
 export default function Calculator() {
   const [state, setState] = useState<CalculatorState>({
     currentInput: "",
     displayValue: '0"',
+    displayMeasurement: null,
     previousValue: null,
     operation: 'none',
     shouldResetInput: false,
   });
 
   const [displayMode, setDisplayMode] = useState<DisplayMode>("fraction");
+  const [precision, setPrecision] = useState<Precision>(16);
+  const [reduceFractions, setReduceFractions] = useState<boolean>(true);
+
+  // Reformat display when precision or reduce setting changes
+  useEffect(() => {
+    if (state.displayMeasurement && !state.currentInput) {
+      const decimalInches = toDecimalInches(state.displayMeasurement);
+      const reformatted = toImperialMeasurement(decimalInches, precision, reduceFractions);
+      const formatted = formatImperialMeasurement(reformatted);
+      setState(prev => ({
+        ...prev,
+        displayValue: formatted,
+        displayMeasurement: reformatted,
+      }));
+    }
+  }, [precision, reduceFractions]);
 
   const handleNumberClick = (num: string) => {
     if (state.shouldResetInput) {
@@ -65,6 +83,7 @@ export default function Calculator() {
     setState({
       currentInput: "",
       displayValue: '0"',
+      displayMeasurement: null,
       previousValue: null,
       operation: 'none',
       shouldResetInput: false,
@@ -80,9 +99,9 @@ export default function Calculator() {
 
   const handleOperation = (op: OperationType) => {
     if (op === 'none') return;
-    
+
     const parsed = parseInput(state.currentInput || state.displayValue);
-    
+
     if (!parsed) return;
 
     if (state.previousValue && state.operation !== 'none') {
@@ -90,13 +109,16 @@ export default function Calculator() {
         const result = performOperation(
           state.previousValue,
           parsed,
-          state.operation as 'add' | 'subtract' | 'multiply' | 'divide'
+          state.operation as 'add' | 'subtract' | 'multiply' | 'divide',
+          precision,
+          reduceFractions
         );
         const formatted = formatImperialMeasurement(result);
-        
+
         setState(prev => ({
           ...prev,
           displayValue: formatted,
+          displayMeasurement: result,
           previousValue: result,
           currentInput: "",
           operation: op,
@@ -106,6 +128,7 @@ export default function Calculator() {
         setState(prev => ({
           ...prev,
           displayValue: "Error",
+          displayMeasurement: null,
           currentInput: "",
           previousValue: null,
           operation: 'none',
@@ -127,13 +150,14 @@ export default function Calculator() {
     if (!state.previousValue || state.operation === 'none') {
       const parsed = parseInput(state.currentInput);
       if (parsed) {
-        // Round single value to 1/16"
+        // Round single value to specified precision
         const decimalInches = toDecimalInches(parsed);
-        const rounded = toImperialMeasurement(decimalInches);
+        const rounded = toImperialMeasurement(decimalInches, precision, reduceFractions);
         const formatted = formatImperialMeasurement(rounded);
         setState(prev => ({
           ...prev,
           displayValue: formatted,
+          displayMeasurement: rounded,
           currentInput: "",
           shouldResetInput: true,
         }));
@@ -148,13 +172,16 @@ export default function Calculator() {
       const result = performOperation(
         state.previousValue,
         parsed,
-        state.operation as 'add' | 'subtract' | 'multiply' | 'divide'
+        state.operation as 'add' | 'subtract' | 'multiply' | 'divide',
+        precision,
+        reduceFractions
       );
       const formatted = formatImperialMeasurement(result);
-      
+
       setState(prev => ({
         ...prev,
         displayValue: formatted,
+        displayMeasurement: result,
         previousValue: null,
         currentInput: "",
         operation: 'none',
@@ -164,6 +191,7 @@ export default function Calculator() {
       setState(prev => ({
         ...prev,
         displayValue: "Error",
+        displayMeasurement: null,
         currentInput: "",
         previousValue: null,
         operation: 'none',
@@ -191,25 +219,7 @@ export default function Calculator() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex gap-1 bg-muted rounded-md p-1">
-              <Button
-                variant={displayMode === 'fraction' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setDisplayMode('fraction')}
-                className="text-xs px-3"
-              >
-                Fraction
-              </Button>
-              <Button
-                variant={displayMode === 'decimal' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setDisplayMode('decimal')}
-                className="text-xs px-3"
-              >
-                Decimal
-              </Button>
-            </div>
+          <div className="flex justify-end mb-2">
             <Link href="/intervals">
               <Button variant="ghost" size="sm">
                 <Ruler className="w-4 h-4 mr-2" />
@@ -217,13 +227,75 @@ export default function Calculator() {
               </Button>
             </Link>
           </div>
-          <div className="text-center">
+          <div className="text-center mb-4">
             <h1 className="text-2xl font-semibold text-foreground mb-1">
               Tape Measure Calculator
             </h1>
             <p className="text-sm text-muted-foreground">
               Inches & Fractions Calculator
             </p>
+          </div>
+
+          {/* Settings Controls */}
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-1 bg-muted rounded-md p-1">
+              <Button
+                variant={displayMode === 'fraction' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDisplayMode('fraction')}
+                className="text-xs px-3 flex-1"
+              >
+                Fraction
+              </Button>
+              <Button
+                variant={displayMode === 'decimal' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDisplayMode('decimal')}
+                className="text-xs px-3 flex-1"
+              >
+                Decimal
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
+                <Button
+                  variant={precision === 16 ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setPrecision(16)}
+                  className="text-xs px-3 flex-1"
+                >
+                  1/16"
+                </Button>
+                <Button
+                  variant={precision === 32 ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setPrecision(32)}
+                  className="text-xs px-3 flex-1"
+                >
+                  1/32"
+                </Button>
+              </div>
+
+              <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
+                <Button
+                  variant={reduceFractions ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setReduceFractions(true)}
+                  className="text-xs px-3 flex-1"
+                >
+                  Reduce
+                </Button>
+                <Button
+                  variant={!reduceFractions ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setReduceFractions(false)}
+                  className="text-xs px-3 flex-1"
+                >
+                  Exact
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

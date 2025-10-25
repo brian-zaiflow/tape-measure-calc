@@ -15,6 +15,7 @@ export interface ImperialMeasurement {
 export interface CalculatorState {
   currentInput: string;
   displayValue: string;
+  displayMeasurement: ImperialMeasurement | null; // Stores the underlying measurement for reformatting
   previousValue: ImperialMeasurement | null;
   operation: OperationType;
   shouldResetInput: boolean;

@@ -32,34 +32,38 @@ export function reduceFraction(numerator: number, denominator: number): { numera
   };
 }
 
-// Round to nearest 1/16 inch mark
+// Round to nearest tape mark (1/16 or 1/32 inch)
 // Ties (halfway points) round up, following construction practice
-export function roundToTapeMark(decimalInches: number): number {
-  const increment = 1/16;
+export function roundToTapeMark(decimalInches: number, precision: 16 | 32 = 16): number {
+  const increment = 1 / precision;
   // Use Math.floor + 0.5 to always round ties up
   return Math.floor((decimalInches / increment) + 0.5) * increment;
 }
 
 // Convert decimal inches back to imperial measurement
-export function toImperialMeasurement(decimalInches: number): ImperialMeasurement {
-  // Round to 1/16 inch
-  const rounded = roundToTapeMark(decimalInches);
+export function toImperialMeasurement(
+  decimalInches: number,
+  precision: 16 | 32 = 16,
+  reduceToLowestTerms: boolean = true
+): ImperialMeasurement {
+  // Round to specified precision
+  const rounded = roundToTapeMark(decimalInches, precision);
 
   const wholeInches = Math.floor(rounded);
   const fractionPart = rounded - wholeInches;
 
-  // Convert fraction to sixteenths (common denominator)
-  const sixteenths = Math.round(fractionPart * 16);
+  // Convert fraction to specified denominator
+  const parts = Math.round(fractionPart * precision);
 
-  let numerator = sixteenths;
-  let denominator = 16;
+  let numerator: number = parts;
+  let denominator: number = precision;
 
-  // Reduce the fraction
-  if (numerator > 0) {
+  // Reduce the fraction if requested
+  if (numerator > 0 && reduceToLowestTerms) {
     const reduced = reduceFraction(numerator, denominator);
     numerator = reduced.numerator;
     denominator = reduced.denominator;
-  } else {
+  } else if (numerator === 0) {
     numerator = 0;
     denominator = 1;
   }
@@ -213,7 +217,9 @@ export function parseInput(input: string): ImperialMeasurement | null {
 export function performOperation(
   left: ImperialMeasurement,
   right: ImperialMeasurement,
-  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  operation: 'add' | 'subtract' | 'multiply' | 'divide',
+  precision: 16 | 32 = 16,
+  reduceToLowestTerms: boolean = true
 ): ImperialMeasurement {
   const leftDecimal = toDecimalInches(left);
   const rightDecimal = toDecimalInches(right);
@@ -240,5 +246,5 @@ export function performOperation(
       result = leftDecimal;
   }
 
-  return toImperialMeasurement(result);
+  return toImperialMeasurement(result, precision, reduceToLowestTerms);
 }
