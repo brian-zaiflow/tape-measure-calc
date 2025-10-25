@@ -114,10 +114,12 @@ export default function Calculator() {
   };
 
   // Helper to ensure input ends with " (auto-assume inches)
+  // Exception: don't add " if using feet notation (ends with ')
   const ensureInchMark = (input: string): string => {
     const trimmed = input.trim();
     if (!trimmed) return trimmed;
     if (trimmed.endsWith('"')) return trimmed;
+    if (trimmed.endsWith("'")) return trimmed; // Feet-only notation like "5'"
     return trimmed + '"';
   };
 
@@ -227,9 +229,9 @@ export default function Calculator() {
     }
   };
 
-  // Always show " at the end of user input
+  // Show " at the end of user input (unless it ends with ' for feet notation)
   const currentDisplay = state.currentInput
-    ? (state.currentInput + '"')
+    ? (state.currentInput.endsWith("'") ? state.currentInput : state.currentInput + '"')
     : state.displayValue;
   const showOperation = state.operation !== 'none' && state.previousValue;
 
