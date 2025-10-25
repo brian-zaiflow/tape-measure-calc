@@ -69,8 +69,10 @@ export default function Calculator() {
     setState(prev => {
       let newInput = prev.currentInput;
 
-      // If clicking a fraction and current input ends with a digit, add space first
-      if (symbol.includes('/') && /\d$/.test(newInput)) {
+      // If clicking a complete fraction (like "1/2") and current input ends with a digit, add space first
+      // Don't add space for standalone "/" symbol
+      const isCompleteFraction = /\d+\/\d+/.test(symbol);
+      if (isCompleteFraction && /\d$/.test(newInput)) {
         newInput += ' ';
       }
 
@@ -99,10 +101,19 @@ export default function Calculator() {
     }));
   };
 
+  // Helper to ensure input ends with " (auto-assume inches)
+  const ensureInchMark = (input: string): string => {
+    const trimmed = input.trim();
+    if (!trimmed) return trimmed;
+    if (trimmed.endsWith('"')) return trimmed;
+    return trimmed + '"';
+  };
+
   const handleOperation = (op: OperationType) => {
     if (op === 'none') return;
 
-    const parsed = parseInput(state.currentInput || state.displayValue);
+    const inputWithInches = ensureInchMark(state.currentInput || state.displayValue);
+    const parsed = parseInput(inputWithInches);
 
     if (!parsed) return;
 
@@ -150,7 +161,8 @@ export default function Calculator() {
 
   const handleEquals = () => {
     if (!state.previousValue || state.operation === 'none') {
-      const parsed = parseInput(state.currentInput);
+      const inputWithInches = ensureInchMark(state.currentInput);
+      const parsed = parseInput(inputWithInches);
       if (parsed) {
         // Round single value to specified precision
         const decimalInches = toDecimalInches(parsed);
@@ -167,7 +179,8 @@ export default function Calculator() {
       return;
     }
 
-    const parsed = parseInput(state.currentInput || state.displayValue);
+    const inputWithInches = ensureInchMark(state.currentInput || state.displayValue);
+    const parsed = parseInput(inputWithInches);
     if (!parsed) return;
 
     try {
@@ -202,13 +215,16 @@ export default function Calculator() {
     }
   };
 
-  const currentDisplay = state.currentInput || state.displayValue;
+  // Always show " at the end of user input
+  const currentDisplay = state.currentInput
+    ? (state.currentInput + '"')
+    : state.displayValue;
   const showOperation = state.operation !== 'none' && state.previousValue;
 
-  // Format display based on mode
+  // Format display based on mode (for display toggle only, not input)
   const formatDisplay = (value: string): string => {
     if (displayMode === 'decimal') {
-      const parsed = parseInput(value);
+      const parsed = parseInput(ensureInchMark(value));
       if (parsed) {
         return formatAsDecimal(parsed);
       }
@@ -337,7 +353,7 @@ export default function Calculator() {
 
           {/* Calculator Grid */}
           <div className="grid grid-cols-4 gap-1.5">
-            {/* First Row: Clear, Delete, and Operations */}
+            {/* First Row: Clear, Delete, Feet mark, and Divide */}
             <Button
               variant="destructive"
               onClick={handleClear}
@@ -356,11 +372,11 @@ export default function Calculator() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => handleSymbolClick('.')}
+              onClick={() => handleSymbolClick("'")}
               className="min-h-14 text-lg font-semibold"
-              data-testid="button-decimal"
+              data-testid="button-feet"
             >
-              .
+              '
             </Button>
             <Button
               variant={state.operation === 'divide' ? 'default' : 'secondary'}
@@ -471,10 +487,11 @@ export default function Calculator() {
               <Plus className="w-5 h-5" />
             </Button>
 
+            {/* Last row: 0 (double width), /, Space */}
             <Button
               variant="outline"
               onClick={() => handleNumberClick('0')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold col-span-2"
               data-testid="button-0"
             >
               0
@@ -486,14 +503,6 @@ export default function Calculator() {
               data-testid="button-fraction"
             >
               /
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => handleSymbolClick('"')}
-              className="min-h-14 text-lg font-semibold"
-              data-testid="button-inches"
-            >
-              "
             </Button>
             <Button
               variant="secondary"
