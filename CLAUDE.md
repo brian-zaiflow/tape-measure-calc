@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-An imperial tape measure calculator designed for construction professionals. Mobile-first React application with TypeScript that handles precise fractional arithmetic with 1/16" precision. Includes two main tools:
+An imperial tape measure calculator designed for construction professionals. Mobile-first React application with TypeScript that handles precise fractional arithmetic with 1/16" precision.
+
+**Progressive Web App (PWA)** - Works offline and can be installed on mobile devices for use on job sites without internet.
+
+Includes two main tools:
 1. **Calculator** - Add, subtract, multiply, and divide imperial measurements
 2. **Intervals** - Divide lengths into equal parts or generate evenly spaced marks with custom intervals
 
@@ -146,3 +150,17 @@ See `DEPLOY.md` for GitHub Pages deployment instructions. The app is configured 
 - Hash-based routing (wouter with `useHashLocation`) for GitHub Pages compatibility
 - Static build outputs to `dist/` directory
 - Base path set to `/tape-measure-calc/` in `vite.config.ts`
+
+## Progressive Web App (PWA)
+
+The app includes full PWA support via `vite-plugin-pwa`:
+- **Service Worker**: Automatically generated with Workbox for offline caching
+- **Manifest**: Configured for installation on mobile devices
+- **Offline-first**: All app functionality works without internet after first visit
+- **Asset caching**: Caches app bundle, CSS, fonts (Google Fonts), and images
+- **Auto-updates**: Service worker updates automatically when new versions deploy
+
+**Key files:**
+- PWA config in `vite.config.ts` with VitePWA plugin
+- Icons: `client/public/pwa-192x192.png` and `pwa-512x512.png` (generate with `generate-icons.html`)
+- Service worker and manifest generated automatically during build

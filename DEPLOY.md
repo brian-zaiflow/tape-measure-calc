@@ -49,6 +49,26 @@ The built files will be in `dist/` directory.
 - All calculator and interval logic runs in the browser
 - The GitHub Actions workflow builds the Vite project and deploys to GitHub Pages
 - Uses hash-based routing (URLs like `#/intervals`) for reliable client-side routing on GitHub Pages
+- **Progressive Web App (PWA)** - Works offline and can be installed on mobile devices
+
+## PWA Features
+
+The app is a Progressive Web App with:
+- **Offline support** - Works without internet connection after first visit
+- **Install on mobile** - Add to home screen on iOS/Android
+- **Auto-updates** - Automatically updates when new versions are deployed
+- **Caches fonts and assets** - Fast loading even on slow connections
+
+### First-time Setup: Generate PWA Icons
+
+Before deploying, you need to generate PWA icons:
+
+1. Open `generate-icons.html` in a browser
+2. Click both download buttons to get `pwa-192x192.png` and `pwa-512x512.png`
+3. Place both files in `client/public/`
+4. Commit and push
+
+Alternatively, use an online tool like [PWA Builder](https://www.pwabuilder.com/imageGenerator) to create professional icons.
 
 ## Local Development
 

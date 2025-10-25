@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate PWA Icons</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      margin: 10px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .canvas-container {
+      display: flex;
+      gap: 20px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>PWA Icon Generator</h1>
+  <p>This will generate simple placeholder icons for the PWA. Click the buttons below to download.</p>
+
+  <div class="canvas-container">
+    <div>
+      <h3>192×192 Icon</h3>
+      <canvas id="icon192" width="192" height="192"></canvas>
+      <br>
+      <button onclick="downloadIcon('icon192', 'pwa-192x192.png')">Download 192×192</button>
+    </div>
+
+    <div>
+      <h3>512×512 Icon</h3>
+      <canvas id="icon512" width="512" height="512"></canvas>
+      <br>
+      <button onclick="downloadIcon('icon512', 'pwa-512x512.png')">Download 512×512</button>
+    </div>
+  </div>
+
+  <p><strong>Instructions:</strong></p>
+  <ol>
+    <li>Click the download buttons above to save both icons</li>
+    <li>Place both PNG files in the <code>client/public/</code> directory</li>
+    <li>Rebuild the app with <code>npm run build</code></li>
+  </ol>
+
+  <script>
+    function drawIcon(canvasId, size) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(0, 0, size, size);
+
+      // Draw ruler icon
+      ctx.strokeStyle = '#ffffff';
+      ctx.fillStyle = '#ffffff';
+      ctx.lineWidth = size * 0.04;
+
+      // Main ruler rectangle
+      const rulerWidth = size * 0.6;
+      const rulerHeight = size * 0.15;
+      const x = (size - rulerWidth) / 2;
+      const y = (size - rulerHeight) / 2;
+
+      ctx.strokeRect(x, y, rulerWidth, rulerHeight);
+
+      // Tick marks
+      const numTicks = 12;
+      for (let i = 0; i <= numTicks; i++) {
+        const tickX = x + (rulerWidth / numTicks) * i;
+        const tickHeight = i % 4 === 0 ? rulerHeight * 0.6 :
+                          i % 2 === 0 ? rulerHeight * 0.4 :
+                          rulerHeight * 0.25;
+
+        ctx.beginPath();
+        ctx.moveTo(tickX, y);
+        ctx.lineTo(tickX, y + tickHeight);
+        ctx.stroke();
+      }
+
+      // Text
+      ctx.font = `bold ${size * 0.12}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('TAPE', size / 2, y + rulerHeight + size * 0.15);
+      ctx.fillText('CALC', size / 2, y + rulerHeight + size * 0.28);
+    }
+
+    function downloadIcon(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Draw icons on load
+    drawIcon('icon192', 192);
+    drawIcon('icon512', 512);
+  </script>
+</body>
+</html>
