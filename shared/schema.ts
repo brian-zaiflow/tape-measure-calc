@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Calculator operation types
-export const OperationType = z.enum(['add', 'subtract', 'divide', 'none']);
+export const OperationType = z.enum(['add', 'subtract', 'multiply', 'divide', 'none']);
 export type OperationType = z.infer<typeof OperationType>;
 
 // Precision settings for rounding

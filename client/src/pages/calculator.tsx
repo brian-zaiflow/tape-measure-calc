@@ -15,7 +15,7 @@ import {
   toDecimalInches,
   toImperialMeasurement
 } from "@/lib/fraction-math";
-import { Delete, Plus, Minus, Divide, RotateCcw } from "lucide-react";
+import { Delete, Plus, Minus, Divide, X } from "lucide-react";
 
 export default function Calculator() {
   const [state, setState] = useState<CalculatorState>({
@@ -81,7 +81,7 @@ export default function Calculator() {
         const result = performOperation(
           state.previousValue,
           parsed,
-          state.operation as 'add' | 'subtract' | 'divide',
+          state.operation as 'add' | 'subtract' | 'multiply' | 'divide',
           state.precision
         );
         const formatted = formatImperialMeasurement(result, state.displayFormat);
@@ -140,7 +140,7 @@ export default function Calculator() {
       const result = performOperation(
         state.previousValue,
         parsed,
-        state.operation as 'add' | 'subtract' | 'divide',
+        state.operation as 'add' | 'subtract' | 'multiply' | 'divide',
         state.precision
       );
       const formatted = formatImperialMeasurement(result, state.displayFormat);
@@ -252,6 +252,7 @@ export default function Calculator() {
                 {formatImperialMeasurement(state.previousValue!, state.displayFormat)} {
                   state.operation === 'add' ? '+' :
                   state.operation === 'subtract' ? '−' :
+                  state.operation === 'multiply' ? '×' :
                   state.operation === 'divide' ? '÷' : ''
                 }
               </div>
@@ -326,12 +327,12 @@ export default function Calculator() {
               9
             </Button>
             <Button
-              variant={state.operation === 'subtract' ? 'default' : 'secondary'}
-              onClick={() => handleOperation('subtract')}
+              variant={state.operation === 'multiply' ? 'default' : 'secondary'}
+              onClick={() => handleOperation('multiply')}
               className="min-h-16"
-              data-testid="button-subtract"
+              data-testid="button-multiply"
             >
-              <Minus className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </Button>
 
             <Button
@@ -359,12 +360,12 @@ export default function Calculator() {
               6
             </Button>
             <Button
-              variant={state.operation === 'add' ? 'default' : 'secondary'}
-              onClick={() => handleOperation('add')}
+              variant={state.operation === 'subtract' ? 'default' : 'secondary'}
+              onClick={() => handleOperation('subtract')}
               className="min-h-16"
-              data-testid="button-add"
+              data-testid="button-subtract"
             >
-              <Plus className="w-5 h-5" />
+              <Minus className="w-5 h-5" />
             </Button>
 
             <Button
@@ -392,12 +393,12 @@ export default function Calculator() {
               3
             </Button>
             <Button
-              variant="secondary"
-              onClick={() => handleSymbolClick('"')}
-              className="min-h-16 text-lg font-semibold"
-              data-testid="button-inches"
+              variant={state.operation === 'add' ? 'default' : 'secondary'}
+              onClick={() => handleOperation('add')}
+              className="min-h-16"
+              data-testid="button-add"
             >
-              "
+              <Plus className="w-5 h-5" />
             </Button>
 
             <Button
@@ -418,16 +419,28 @@ export default function Calculator() {
             </Button>
             <Button
               variant="secondary"
+              onClick={() => handleSymbolClick('"')}
+              className="min-h-16 text-lg font-semibold"
+              data-testid="button-inches"
+            >
+              "
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => handleSymbolClick(' ')}
               className="min-h-16 text-sm font-semibold"
               data-testid="button-space"
             >
               Space
             </Button>
+          </div>
+
+          {/* Second Grid - Equals Button */}
+          <div className="mt-2">
             <Button
               variant="default"
               onClick={handleEquals}
-              className="min-h-16 text-xl font-semibold"
+              className="min-h-16 text-xl font-semibold w-full"
               data-testid="button-equals"
             >
               =

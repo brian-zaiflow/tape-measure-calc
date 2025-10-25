@@ -217,7 +217,7 @@ export function parseInput(input: string): ImperialMeasurement | null {
 export function performOperation(
   left: ImperialMeasurement,
   right: ImperialMeasurement,
-  operation: 'add' | 'subtract' | 'divide',
+  operation: 'add' | 'subtract' | 'multiply' | 'divide',
   precision: PrecisionType
 ): ImperialMeasurement {
   const leftDecimal = toDecimalInches(left);
@@ -231,6 +231,9 @@ export function performOperation(
       break;
     case 'subtract':
       result = leftDecimal - rightDecimal;
+      break;
+    case 'multiply':
+      result = leftDecimal * rightDecimal;
       break;
     case 'divide':
       if (rightDecimal === 0) {
