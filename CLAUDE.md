@@ -47,13 +47,15 @@ Serves the built static files locally for testing.
 - All arithmetic converts to decimal inches, performs operation, then converts back
 - All values are positive (no negative numbers - use subtract operation instead)
 - Fraction reduction uses GCD algorithm - fractions always displayed in reduced form
-- Fixed 1/16" precision - always rounds to nearest 1/16" mark
+- Configurable precision: 1/16" or 1/32" accuracy
 - Tape measure rounding: ties (halfway points) round up per construction practice
 - `toDecimalInches()`: converts measurement to decimal for calculations
-- `toImperialMeasurement()`: converts decimal back, rounding to 1/16" and reducing fractions
+- `toImperialMeasurement()`: converts decimal back, rounding to 1/16" or 1/32" and reducing fractions
 - `performOperation()`: handles add, subtract, multiply, divide operations
 - `formatImperialMeasurement()`: converts to display string (always shows inches only, e.g., "63 1/2"")
-- `parseInput()`: parses multiple formats including feet notation (e.g., "5' 3 1/2"", "8'", "3 1/2"") - feet are converted to inches internally for storage/display
+- `parseInput()`: parses multiple formats including:
+  - Feet notation (e.g., "5' 3 1/2"", "8'", "3 1/2"") - feet are converted to inches internally
+  - **Decimal to fraction conversion** (e.g., "5.625" → "5 5/8"", "10.5" → "10 1/2"")
 
 **Calculator state** (`client/src/types/index.ts`):
 - `CalculatorState` tracks: currentInput, displayValue, previousValue, operation, shouldResetInput
@@ -86,9 +88,10 @@ Serves the built static files locally for testing.
 - `calculator.tsx`: Main arithmetic calculator with operation buttons and quick fraction shortcuts
   - Collapsible header with settings (collapsed by default to fit on phone screens)
   - Precision toggle: 1/16" or 1/32"
-  - Display mode: Fraction or Decimal
+  - Display mode: Fraction (always on, decimal mode hidden but available in code)
   - Reduce toggle: Reduce fractions or show exact values
   - Compact layout optimized for iPhone screens
+  - **Decimal to fraction converter**: Enter decimal values (e.g., 5.625) and press = to convert to nearest tape measure fraction (5 5/8")
 - `intervals.tsx`: Tape measure interval generator with two modes:
   - Divide mode: Divide a total length into N equal parts with optional offset
   - Custom mode: Generate marks at custom intervals starting from a custom point
@@ -153,23 +156,28 @@ npm run test:coverage # Run with coverage report
 ```
 
 **Test files:**
-- `client/src/lib/fraction-math.test.ts` - 54 tests covering all core arithmetic operations
+- `client/src/lib/fraction-math.test.ts` - 58 tests covering all core arithmetic operations
 - `client/src/lib/intervals.test.ts` - 12 tests covering divide mode and custom interval mode
 
 **Test coverage:**
 - All fraction math operations (add, subtract, multiply, divide)
-- Input parsing (feet notation, fractions, mixed measurements)
+- Input parsing (feet notation, fractions, mixed measurements, **decimals**)
 - Rounding behavior (1/16" and 1/32" precision)
 - Fraction reduction
+- **Decimal to fraction conversion** (5.625 → 5 5/8", etc.)
 - Intervals calculator logic (both divide and custom modes)
 
 ## Key Implementation Notes
 
-1. **Fraction arithmetic is the core complexity**: all calculations flow through decimal conversion, operation, then back to imperial with 1/16" rounding
-2. **Simplified architecture**: Display shows inches only (no feet in output), no negative numbers, fixed 1/16" precision, always reduced fractions
-3. **Input parsing accepts feet notation**: Users can input "5' 3 1/2"" which is converted to "63 1/2"" internally and for display
-4. **Pure static site**: 100% client-side, no backend, perfect for GitHub Pages
-5. **Two-page application**: Calculator (/) and Intervals (/intervals) with client-side routing
+1. **Fraction arithmetic is the core complexity**: all calculations flow through decimal conversion, operation, then back to imperial with 1/16" or 1/32" rounding
+2. **Simplified architecture**: Display shows inches only (no feet in output), no negative numbers, configurable precision (1/16" or 1/32"), always reduced fractions
+3. **Input parsing supports multiple formats**:
+   - Feet notation: "5' 3 1/2"" → "63 1/2""
+   - Fractions: "3 1/4"" → "3 1/4""
+   - **Decimals**: "5.625" → "5 5/8"" (auto-converts to nearest tape measure fraction)
+4. **Auto-assume inches**: `"` mark is always displayed and automatically added, no need to manually enter it
+5. **Pure static site**: 100% client-side, no backend, perfect for GitHub Pages
+6. **Two-page application**: Calculator (/) and Intervals (/intervals) with client-side routing
 
 ## Deployment
 

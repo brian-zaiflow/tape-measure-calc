@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CalculatorHelp } from "@/components/CalculatorHelp";
 import { Link } from "wouter";
 import type {
   CalculatorState,
@@ -69,6 +70,16 @@ export default function Calculator() {
     setState(prev => {
       let newInput = prev.currentInput;
 
+      // If we should reset input (after operation), start fresh
+      if (prev.shouldResetInput) {
+        newInput = '';
+      }
+
+      // If clicking decimal point with no leading digit, prepend "0"
+      if (symbol === '.' && newInput === '') {
+        newInput = '0';
+      }
+
       // If clicking a complete fraction (like "1/2") and current input ends with a digit, add space first
       // Don't add space for standalone "/" symbol
       const isCompleteFraction = /\d+\/\d+/.test(symbol);
@@ -79,6 +90,7 @@ export default function Calculator() {
       return {
         ...prev,
         currentInput: newInput + symbol,
+        shouldResetInput: false,
       };
     });
   };
@@ -238,13 +250,16 @@ export default function Calculator() {
         {/* Collapsible Header & Settings */}
         <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen} className="mb-3">
           <div className="flex items-center justify-between gap-2">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2">
-                <Settings className="w-4 h-4" />
-                <span className="text-xs font-semibold">Settings</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
+            <div className="flex items-center gap-1">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2">
+                  <Settings className="w-4 h-4" />
+                  <span className="text-xs font-semibold">Settings</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CalculatorHelp />
+            </div>
             <Link href="/intervals">
               <Button variant="ghost" size="sm" className="h-8 px-2">
                 <Ruler className="w-4 h-4 mr-1" />
@@ -487,14 +502,22 @@ export default function Calculator() {
               <Plus className="w-5 h-5" />
             </Button>
 
-            {/* Last row: 0 (double width), /, Space */}
+            {/* Last row: 0, ., /, Space */}
             <Button
               variant="outline"
               onClick={() => handleNumberClick('0')}
-              className="min-h-14 text-xl font-semibold col-span-2"
+              className="min-h-14 text-xl font-semibold"
               data-testid="button-0"
             >
               0
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => handleSymbolClick('.')}
+              className="min-h-14 text-lg font-semibold"
+              data-testid="button-decimal"
+            >
+              .
             </Button>
             <Button
               variant="secondary"
@@ -533,23 +556,23 @@ export default function Calculator() {
               <div className="flex-1 h-px bg-border ml-2"></div>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
-            <Button variant="outline" onClick={() => handleSymbolClick('1/16"')} className="min-h-10 text-xs hover:bg-accent">1/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/8"')} className="min-h-10 text-xs hover:bg-accent">1/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/16"')} className="min-h-10 text-xs hover:bg-accent">3/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/4"')} className="min-h-10 text-xs hover:bg-accent">1/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/16"')} className="min-h-10 text-xs hover:bg-accent">5/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/16')} className="min-h-10 text-xs hover:bg-accent">1/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/8')} className="min-h-10 text-xs hover:bg-accent">1/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/16')} className="min-h-10 text-xs hover:bg-accent">3/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/4')} className="min-h-10 text-xs hover:bg-accent">1/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/16')} className="min-h-10 text-xs hover:bg-accent">5/16"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('3/8"')} className="min-h-10 text-xs hover:bg-accent">3/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/16"')} className="min-h-10 text-xs hover:bg-accent">7/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/2"')} className="min-h-10 text-xs hover:bg-accent">1/2"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('9/16"')} className="min-h-10 text-xs hover:bg-accent">9/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/8"')} className="min-h-10 text-xs hover:bg-accent">5/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/8')} className="min-h-10 text-xs hover:bg-accent">3/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/16')} className="min-h-10 text-xs hover:bg-accent">7/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/2')} className="min-h-10 text-xs hover:bg-accent">1/2"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('9/16')} className="min-h-10 text-xs hover:bg-accent">9/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/8')} className="min-h-10 text-xs hover:bg-accent">5/8"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('11/16"')} className="min-h-10 text-xs hover:bg-accent">11/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/4"')} className="min-h-10 text-xs hover:bg-accent">3/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('13/16"')} className="min-h-10 text-xs hover:bg-accent">13/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/8"')} className="min-h-10 text-xs hover:bg-accent">7/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('15/16"')} className="min-h-10 text-xs hover:bg-accent">15/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('11/16')} className="min-h-10 text-xs hover:bg-accent">11/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/4')} className="min-h-10 text-xs hover:bg-accent">3/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('13/16')} className="min-h-10 text-xs hover:bg-accent">13/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/8')} className="min-h-10 text-xs hover:bg-accent">7/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('15/16')} className="min-h-10 text-xs hover:bg-accent">15/16"</Button>
             </div>
           </div>
         </Card>

@@ -203,7 +203,27 @@ export function parseInput(input: string): ImperialMeasurement | null {
     return { inches, numerator: 0, denominator: 1 };
   }
 
-  // Pattern 8: plain number without quote (e.g., "2")
+  // Pattern 8: decimal with quote (e.g., "5.625"")
+  const decimalWithQuoteMatch = cleaned.match(/^(\d+\.?\d*)"$/);
+  if (decimalWithQuoteMatch) {
+    const decimalValue = parseFloat(decimalWithQuoteMatch[1]);
+    if (!isNaN(decimalValue)) {
+      // Convert decimal inches to imperial measurement with current precision (default 16)
+      // Note: precision will be applied by the caller (calculator) based on user settings
+      return toImperialMeasurement(decimalValue, 16, true);
+    }
+  }
+
+  // Pattern 9: plain decimal without quote (e.g., "5.625")
+  const plainDecimalMatch = cleaned.match(/^(\d+\.\d+)$/);
+  if (plainDecimalMatch) {
+    const decimalValue = parseFloat(plainDecimalMatch[1]);
+    if (!isNaN(decimalValue)) {
+      return toImperialMeasurement(decimalValue, 16, true);
+    }
+  }
+
+  // Pattern 10: plain whole number without quote (e.g., "2")
   const plainNumberMatch = cleaned.match(/^(\d+)$/);
   if (plainNumberMatch) {
     const inches = parseInt(plainNumberMatch[1]);

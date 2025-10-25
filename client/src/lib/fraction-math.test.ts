@@ -212,6 +212,31 @@ describe('parseInput', () => {
   it('handles division by zero in fractions', () => {
     expect(parseInput('5 1/0"')).toBeNull();
   });
+
+  it('parses decimal values with quote', () => {
+    expect(parseInput('5.625"')).toEqual({ inches: 5, numerator: 5, denominator: 8 });
+    expect(parseInput('10.5"')).toEqual({ inches: 10, numerator: 1, denominator: 2 });
+    expect(parseInput('3.75"')).toEqual({ inches: 3, numerator: 3, denominator: 4 });
+    expect(parseInput('0.0625"')).toEqual({ inches: 0, numerator: 1, denominator: 16 });
+  });
+
+  it('parses decimal values without quote', () => {
+    expect(parseInput('5.625')).toEqual({ inches: 5, numerator: 5, denominator: 8 });
+    expect(parseInput('10.5')).toEqual({ inches: 10, numerator: 1, denominator: 2 });
+    expect(parseInput('3.75')).toEqual({ inches: 3, numerator: 3, denominator: 4 });
+  });
+
+  it('rounds decimals to nearest 1/16 inch', () => {
+    // 5.03 is closer to 5" than 5 1/16"
+    expect(parseInput('5.03')).toEqual({ inches: 5, numerator: 0, denominator: 1 });
+    // 5.64 rounds to 5 5/8" (5.625)
+    expect(parseInput('5.64')).toEqual({ inches: 5, numerator: 5, denominator: 8 });
+  });
+
+  it('handles whole decimal numbers', () => {
+    expect(parseInput('5.0"')).toEqual({ inches: 5, numerator: 0, denominator: 1 });
+    expect(parseInput('12.0')).toEqual({ inches: 12, numerator: 0, denominator: 1 });
+  });
 });
 
 describe('performOperation', () => {
