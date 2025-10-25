@@ -1,21 +1,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { 
-  CalculatorState, 
-  PrecisionType, 
-  DisplayFormat, 
+import { Link } from "wouter";
+import {
+  CalculatorState,
   OperationType,
-  ImperialMeasurement 
+  ImperialMeasurement
 } from "@shared/schema";
-import { 
-  formatImperialMeasurement, 
-  parseInput, 
+import {
+  formatImperialMeasurement,
+  parseInput,
   performOperation,
   toDecimalInches,
   toImperialMeasurement
 } from "@/lib/fraction-math";
-import { Delete, Plus, Minus, Divide, X } from "lucide-react";
+import { Delete, Plus, Minus, Divide, X, Ruler } from "lucide-react";
 
 export default function Calculator() {
   const [state, setState] = useState<CalculatorState>({
@@ -23,8 +22,6 @@ export default function Calculator() {
     displayValue: '0"',
     previousValue: null,
     operation: 'none',
-    precision: 'sixteenth',
-    displayFormat: 'reduced',
     shouldResetInput: false,
   });
 
@@ -56,8 +53,6 @@ export default function Calculator() {
       displayValue: '0"',
       previousValue: null,
       operation: 'none',
-      precision: state.precision,
-      displayFormat: state.displayFormat,
       shouldResetInput: false,
     });
   };
@@ -81,10 +76,9 @@ export default function Calculator() {
         const result = performOperation(
           state.previousValue,
           parsed,
-          state.operation as 'add' | 'subtract' | 'multiply' | 'divide',
-          state.precision
+          state.operation as 'add' | 'subtract' | 'multiply' | 'divide'
         );
-        const formatted = formatImperialMeasurement(result, state.displayFormat);
+        const formatted = formatImperialMeasurement(result);
         
         setState(prev => ({
           ...prev,
@@ -119,10 +113,10 @@ export default function Calculator() {
     if (!state.previousValue || state.operation === 'none') {
       const parsed = parseInput(state.currentInput);
       if (parsed) {
-        // Round single value to current precision
+        // Round single value to 1/16"
         const decimalInches = toDecimalInches(parsed);
-        const rounded = toImperialMeasurement(decimalInches, state.precision);
-        const formatted = formatImperialMeasurement(rounded, state.displayFormat);
+        const rounded = toImperialMeasurement(decimalInches);
+        const formatted = formatImperialMeasurement(rounded);
         setState(prev => ({
           ...prev,
           displayValue: formatted,
@@ -140,10 +134,9 @@ export default function Calculator() {
       const result = performOperation(
         state.previousValue,
         parsed,
-        state.operation as 'add' | 'subtract' | 'multiply' | 'divide',
-        state.precision
+        state.operation as 'add' | 'subtract' | 'multiply' | 'divide'
       );
-      const formatted = formatImperialMeasurement(result, state.displayFormat);
+      const formatted = formatImperialMeasurement(result);
       
       setState(prev => ({
         ...prev,
@@ -165,35 +158,6 @@ export default function Calculator() {
     }
   };
 
-  const setPrecision = (precision: PrecisionType) => {
-    setState(prev => ({
-      ...prev,
-      precision,
-    }));
-  };
-
-  const toggleDisplayFormat = () => {
-    setState(prev => {
-      const newFormat: DisplayFormat = prev.displayFormat === 'reduced' ? 'sixteenths' : 'reduced';
-      
-      let newDisplayValue = prev.displayValue;
-      
-      // Re-format the current display value with the new format
-      if (prev.displayValue !== "Error") {
-        const parsed = parseInput(prev.displayValue);
-        if (parsed) {
-          newDisplayValue = formatImperialMeasurement(parsed, newFormat);
-        }
-      }
-      
-      return {
-        ...prev,
-        displayFormat: newFormat,
-        displayValue: newDisplayValue,
-      };
-    });
-  };
-
   const currentDisplay = state.currentInput || state.displayValue;
   const showOperation = state.operation !== 'none' && state.previousValue;
 
@@ -201,55 +165,31 @@ export default function Calculator() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold text-foreground mb-1">
-            Tape Measure Calculator
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Imperial Fraction Calculator
-          </p>
+        <div className="mb-6">
+          <div className="flex justify-end mb-2">
+            <Link href="/intervals">
+              <Button variant="ghost" size="sm">
+                <Ruler className="w-4 h-4 mr-2" />
+                Intervals
+              </Button>
+            </Link>
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold text-foreground mb-1">
+              Tape Measure Calculator
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Inches & Fractions Calculator
+            </p>
+          </div>
         </div>
 
         <Card className="p-6">
-          {/* Settings Row */}
-          <div className="mb-6 flex flex-wrap gap-2 justify-between">
-            <div className="flex gap-2">
-              <Button
-                variant={state.precision === 'eighth' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPrecision('eighth')}
-                className="min-h-9"
-                data-testid="button-precision-eighth"
-              >
-                1/8"
-              </Button>
-              <Button
-                variant={state.precision === 'sixteenth' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPrecision('sixteenth')}
-                className="min-h-9"
-                data-testid="button-precision-sixteenth"
-              >
-                1/16"
-              </Button>
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleDisplayFormat}
-              className="min-h-9"
-              data-testid="button-display-format"
-            >
-              {state.displayFormat === 'reduced' ? 'Reduced' : '16ths'}
-            </Button>
-          </div>
-
           {/* Display */}
           <div className="mb-4 bg-muted rounded-md p-4 min-h-32 flex flex-col justify-end">
             {showOperation && (
               <div className="text-sm text-muted-foreground font-mono mb-1 text-right" data-testid="text-previous-value">
-                {formatImperialMeasurement(state.previousValue!, state.displayFormat)} {
+                {formatImperialMeasurement(state.previousValue!)} {
                   state.operation === 'add' ? '+' :
                   state.operation === 'subtract' ? '−' :
                   state.operation === 'multiply' ? '×' :
@@ -286,11 +226,11 @@ export default function Calculator() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => handleSymbolClick("'")}
+              onClick={() => handleSymbolClick('.')}
               className="min-h-16 text-lg font-semibold"
-              data-testid="button-feet"
+              data-testid="button-decimal"
             >
-              '
+              .
             </Button>
             <Button
               variant={state.operation === 'divide' ? 'default' : 'secondary'}
@@ -447,48 +387,33 @@ export default function Calculator() {
             </Button>
           </div>
 
-          {/* Quick Fraction Buttons */}
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handleSymbolClick(' 1/2"')}
-              className="min-h-12 text-sm"
-              data-testid="button-quick-1-2"
-            >
-              1/2"
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleSymbolClick(' 1/4"')}
-              className="min-h-12 text-sm"
-              data-testid="button-quick-1-4"
-            >
-              1/4"
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleSymbolClick(' 3/4"')}
-              className="min-h-12 text-sm"
-              data-testid="button-quick-3-4"
-            >
-              3/4"
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleSymbolClick(' 1/8"')}
-              className="min-h-12 text-sm"
-              data-testid="button-quick-1-8"
-            >
-              1/8"
-            </Button>
+          {/* Quick Fraction Buttons - All reduced fractions from 1/16 to 15/16 */}
+          <div className="mt-4 grid grid-cols-5 gap-2">
+            <Button variant="outline" onClick={() => handleSymbolClick('1/16"')} className="min-h-12 text-sm">1/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/8"')} className="min-h-12 text-sm">1/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/16"')} className="min-h-12 text-sm">3/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/4"')} className="min-h-12 text-sm">1/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/16"')} className="min-h-12 text-sm">5/16"</Button>
+
+            <Button variant="outline" onClick={() => handleSymbolClick('3/8"')} className="min-h-12 text-sm">3/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/16"')} className="min-h-12 text-sm">7/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/2"')} className="min-h-12 text-sm">1/2"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('9/16"')} className="min-h-12 text-sm">9/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/8"')} className="min-h-12 text-sm">5/8"</Button>
+
+            <Button variant="outline" onClick={() => handleSymbolClick('11/16"')} className="min-h-12 text-sm">11/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/4"')} className="min-h-12 text-sm">3/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('13/16"')} className="min-h-12 text-sm">13/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/8"')} className="min-h-12 text-sm">7/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('15/16"')} className="min-h-12 text-sm">15/16"</Button>
           </div>
 
           {/* Instructions */}
           <div className="mt-6 p-4 bg-muted/50 rounded-md">
             <p className="text-xs text-muted-foreground text-center">
-              Enter measurements like: <span className="font-mono font-semibold text-foreground">5' 3 1/2"</span>
+              Enter measurements like: <span className="font-mono font-semibold text-foreground">3 1/2"</span>
               <br />
-              Use buttons or type feet ('), inches ("), and fractions (/)
+              Use buttons to enter inches (") and fractions (/)
             </p>
           </div>
         </Card>
