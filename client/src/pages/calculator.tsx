@@ -265,7 +265,7 @@ export default function Calculator() {
 
             {/* Settings Controls */}
             <div className="flex flex-col gap-2">
-              <div className="flex gap-1 bg-muted rounded-md p-1">
+              {/* <div className="flex gap-1 bg-muted rounded-md p-1">
                 <Button
                   variant={displayMode === 'fraction' ? 'default' : 'ghost'}
                   size="sm"
@@ -282,7 +282,7 @@ export default function Calculator() {
                 >
                   Decimal
                 </Button>
-              </div>
+              </div> */}
 
               <div className="flex gap-2">
                 <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
