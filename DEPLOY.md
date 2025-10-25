@@ -48,7 +48,7 @@ The built files will be in `dist/` directory.
 - The app is entirely client-side (no backend required)
 - All calculator and interval logic runs in the browser
 - The GitHub Actions workflow builds the Vite project and deploys to GitHub Pages
-- Client-side routing is handled via a 404.html redirect trick
+- Uses hash-based routing (URLs like `#/intervals`) for reliable client-side routing on GitHub Pages
 
 ## Local Development
 

@@ -143,5 +143,6 @@ No test framework currently configured. Tests would need to be set up if require
 
 See `DEPLOY.md` for GitHub Pages deployment instructions. The app is configured with:
 - GitHub Actions workflow for automatic deployment
-- 404.html redirect trick for client-side routing
+- Hash-based routing (wouter with `useHashLocation`) for GitHub Pages compatibility
 - Static build outputs to `dist/` directory
+- Base path set to `/tape-measure-calc/` in `vite.config.ts`
