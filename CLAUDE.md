@@ -186,9 +186,28 @@ The app includes full PWA support via `vite-plugin-pwa`:
 - **Manifest**: Configured for installation on mobile devices
 - **Offline-first**: All app functionality works without internet after first visit
 - **Asset caching**: Caches app bundle, CSS, fonts (Google Fonts), and images
-- **Auto-updates**: Service worker updates automatically when new versions deploy
+- **Smart updates**: Prompts users when new versions are available with one-click reload
+
+### Update Mechanism
+
+When you deploy updates via GitHub Actions:
+
+1. **Automatic detection**: Service worker checks for updates every hour
+2. **User notification**: When a new version is detected, a notification appears at bottom-right:
+   - Shows "New version available!" message
+   - Provides a "Reload" button to update immediately
+   - Users can dismiss and update later
+3. **One-click update**: Clicking "Reload" updates the service worker and refreshes the page
+4. **No forced updates**: Users control when to update (but are notified)
+
+**Implementation:**
+- `vite.config.ts`: PWA config with `registerType: 'prompt'`
+- `client/src/hooks/useRegisterSW.ts`: Hook that manages update detection
+- `client/src/components/ReloadPrompt.tsx`: UI component for update notification
+- Service worker checks for updates hourly via `setInterval`
 
 **Key files:**
 - PWA config in `vite.config.ts` with VitePWA plugin
 - Icons: `client/public/pwa-192x192.png` and `pwa-512x512.png` (generate with `generate-icons.html`)
 - Service worker and manifest generated automatically during build
+- Update detection handled by virtual module: `virtual:pwa-register/react`
