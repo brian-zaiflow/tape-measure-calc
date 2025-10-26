@@ -219,7 +219,7 @@ describe('Intervals Calculator - Custom Mode', () => {
     expect(formatImperialMeasurement(marks[5])).toBe('96"');
   });
 
-  it('generates unlimited marks when no total length specified', () => {
+  it('generates marks up to 25\' when no total length specified', () => {
     const customInterval = '12"';
     const customStart = '0"';
     const totalLength = '';
@@ -234,7 +234,8 @@ describe('Intervals Calculator - Custom Mode', () => {
 
     const intervalInches = toDecimalInches(intervalParsed);
     const startInches = startParsed ? toDecimalInches(startParsed) : 0;
-    const totalInches = totalParsed ? toDecimalInches(totalParsed) : Infinity;
+    // Default to 25' (300 inches) if no total length specified
+    const totalInches = totalParsed ? toDecimalInches(totalParsed) : 300;
 
     const marks: ImperialMeasurement[] = [];
     let currentPosition = startInches + intervalInches;
@@ -243,11 +244,12 @@ describe('Intervals Calculator - Custom Mode', () => {
       currentPosition += intervalInches;
     }
 
-    // Should generate 100 marks (the safety limit)
-    expect(marks).toHaveLength(100);
+    // Should generate 25 marks (12" intervals up to 25' = 300")
+    // 300 / 12 = 25
+    expect(marks).toHaveLength(25);
     expect(formatImperialMeasurement(marks[0])).toBe('12"');
     expect(formatImperialMeasurement(marks[1])).toBe('24"');
-    expect(formatImperialMeasurement(marks[99])).toBe('1200"'); // 100 * 12 = 1200"
+    expect(formatImperialMeasurement(marks[24])).toBe('300"'); // 25 * 12 = 300" = 25'
   });
 
   it('handles fractional intervals', () => {
@@ -316,6 +318,222 @@ describe('Intervals Calculator - Custom Mode', () => {
     expect(formatImperialMeasurement(marks[2])).toBe('29"');
     expect(formatImperialMeasurement(marks[3])).toBe('37"');
     expect(formatImperialMeasurement(marks[4])).toBe('45"');
+  });
+});
+
+describe('Intervals Calculator - Spacing Mode', () => {
+  it('calculates even spacing for screws between start and end', () => {
+    // Example from user: first screw at 1", last screw at 95", desired interval ~8"
+    const firstScrew = '1"';
+    const lastScrew = '95"';
+    const desiredInterval = '8"';
+
+    const firstParsed = parseInput(firstScrew);
+    const lastParsed = parseInput(lastScrew);
+    const desiredParsed = parseInput(desiredInterval);
+
+    if (!firstParsed || !lastParsed || !desiredParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const firstInches = toDecimalInches(firstParsed);
+    const lastInches = toDecimalInches(lastParsed);
+    const desiredInches = toDecimalInches(desiredParsed);
+
+    expect(firstInches).toBe(1);
+    expect(lastInches).toBe(95);
+    expect(desiredInches).toBe(8);
+
+    // Calculate span and number of intervals
+    const span = lastInches - firstInches;
+    const numIntervals = Math.round(span / desiredInches);
+
+    expect(span).toBe(94);
+    expect(numIntervals).toBe(12); // 94 / 8 = 11.75, rounds to 12
+
+    // Calculate actual spacing
+    const actualSpacing = span / numIntervals;
+    expect(actualSpacing).toBeCloseTo(7.833333, 4); // 94 / 12
+
+    // Generate all screw positions (N+1 screws including start and end)
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i <= numIntervals; i++) {
+      const position = firstInches + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    // Should have 13 screws total (12 intervals + 1)
+    expect(marks).toHaveLength(13);
+
+    // Check first, middle, and last positions
+    expect(formatImperialMeasurement(marks[0])).toBe('1"');
+    expect(formatImperialMeasurement(marks[1])).toBe('8 13/16"'); // 1 + 7.833... ≈ 8 13/16"
+    expect(formatImperialMeasurement(marks[6])).toBe('48"'); // Halfway point
+    expect(formatImperialMeasurement(marks[12])).toBe('95"'); // Last screw
+  });
+
+  it('handles small span with desired interval', () => {
+    const firstScrew = '5"';
+    const lastScrew = '20"';
+    const desiredInterval = '3"';
+
+    const firstParsed = parseInput(firstScrew);
+    const lastParsed = parseInput(lastScrew);
+    const desiredParsed = parseInput(desiredInterval);
+
+    if (!firstParsed || !lastParsed || !desiredParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const firstInches = toDecimalInches(firstParsed);
+    const lastInches = toDecimalInches(lastParsed);
+    const desiredInches = toDecimalInches(desiredParsed);
+
+    const span = lastInches - firstInches;
+    const numIntervals = Math.round(span / desiredInches);
+
+    expect(span).toBe(15);
+    expect(numIntervals).toBe(5); // 15 / 3 = 5 exactly
+
+    const actualSpacing = span / numIntervals;
+    expect(actualSpacing).toBe(3); // Perfect 3" spacing
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i <= numIntervals; i++) {
+      const position = firstInches + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(6);
+    expect(formatImperialMeasurement(marks[0])).toBe('5"');
+    expect(formatImperialMeasurement(marks[1])).toBe('8"');
+    expect(formatImperialMeasurement(marks[2])).toBe('11"');
+    expect(formatImperialMeasurement(marks[3])).toBe('14"');
+    expect(formatImperialMeasurement(marks[4])).toBe('17"');
+    expect(formatImperialMeasurement(marks[5])).toBe('20"');
+  });
+
+  it('handles fractional start and end positions', () => {
+    const firstScrew = '2 1/4"';
+    const lastScrew = '50 3/4"';
+    const desiredInterval = '8"';
+
+    const firstParsed = parseInput(firstScrew);
+    const lastParsed = parseInput(lastScrew);
+    const desiredParsed = parseInput(desiredInterval);
+
+    if (!firstParsed || !lastParsed || !desiredParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const firstInches = toDecimalInches(firstParsed);
+    const lastInches = toDecimalInches(lastParsed);
+    const desiredInches = toDecimalInches(desiredParsed);
+
+    expect(firstInches).toBe(2.25);
+    expect(lastInches).toBe(50.75);
+
+    const span = lastInches - firstInches;
+    const numIntervals = Math.round(span / desiredInches);
+
+    expect(span).toBe(48.5);
+    expect(numIntervals).toBe(6); // 48.5 / 8 = 6.0625, rounds to 6
+
+    const actualSpacing = span / numIntervals;
+    expect(actualSpacing).toBeCloseTo(8.083333, 4); // 48.5 / 6
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i <= numIntervals; i++) {
+      const position = firstInches + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(7);
+    expect(formatImperialMeasurement(marks[0])).toBe('2 1/4"');
+    expect(formatImperialMeasurement(marks[6])).toBe('50 3/4"');
+  });
+
+  it('handles very close start and end (rounds to 0 intervals)', () => {
+    const firstScrew = '10"';
+    const lastScrew = '13"';
+    const desiredInterval = '8"';
+
+    const firstParsed = parseInput(firstScrew);
+    const lastParsed = parseInput(lastScrew);
+    const desiredParsed = parseInput(desiredInterval);
+
+    if (!firstParsed || !lastParsed || !desiredParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const firstInches = toDecimalInches(firstParsed);
+    const lastInches = toDecimalInches(lastParsed);
+    const desiredInches = toDecimalInches(desiredParsed);
+
+    const span = lastInches - firstInches;
+    const numIntervals = Math.round(span / desiredInches);
+
+    expect(span).toBe(3);
+    expect(numIntervals).toBe(0); // 3 / 8 = 0.375, rounds to 0
+
+    // Edge case: when numIntervals is 0, should just show start and end
+    const marks: ImperialMeasurement[] = [];
+    if (numIntervals === 0) {
+      marks.push(toImperialMeasurement(firstInches));
+      marks.push(toImperialMeasurement(lastInches));
+    } else {
+      const actualSpacing = span / numIntervals;
+      for (let i = 0; i <= numIntervals; i++) {
+        const position = firstInches + (actualSpacing * i);
+        marks.push(toImperialMeasurement(position));
+      }
+    }
+
+    expect(marks).toHaveLength(2);
+    expect(formatImperialMeasurement(marks[0])).toBe('10"');
+    expect(formatImperialMeasurement(marks[1])).toBe('13"');
+  });
+
+  it('handles larger span with fractional desired interval', () => {
+    const firstScrew = '0"';
+    const lastScrew = '8\''; // 96"
+    const desiredInterval = '16"';
+
+    const firstParsed = parseInput(firstScrew);
+    const lastParsed = parseInput(lastScrew);
+    const desiredParsed = parseInput(desiredInterval);
+
+    if (!firstParsed || !lastParsed || !desiredParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const firstInches = toDecimalInches(firstParsed);
+    const lastInches = toDecimalInches(lastParsed);
+    const desiredInches = toDecimalInches(desiredParsed);
+
+    expect(firstInches).toBe(0);
+    expect(lastInches).toBe(96);
+    expect(desiredInches).toBe(16);
+
+    const span = lastInches - firstInches;
+    const numIntervals = Math.round(span / desiredInches);
+
+    expect(span).toBe(96);
+    expect(numIntervals).toBe(6); // 96 / 16 = 6 exactly
+
+    const actualSpacing = span / numIntervals;
+    expect(actualSpacing).toBe(16);
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i <= numIntervals; i++) {
+      const position = firstInches + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(7);
+    expect(formatImperialMeasurement(marks[0])).toBe('0"');
+    expect(formatImperialMeasurement(marks[1])).toBe('16"');
+    expect(formatImperialMeasurement(marks[6])).toBe('96"');
   });
 });
 

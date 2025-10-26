@@ -13,21 +13,62 @@ import {
   toImperialMeasurement,
 } from "@/lib/fraction-math";
 
-type Mode = "divide" | "custom";
+type Mode = "divide" | "custom" | "spacing";
 
 export default function Intervals() {
-  const [mode, setMode] = useState<Mode>("divide");
+  const [mode, setMode] = useState<Mode>("spacing");
   const [totalLength, setTotalLength] = useState("");
   const [divisions, setDivisions] = useState("");
   const [offset, setOffset] = useState("");
   const [customInterval, setCustomInterval] = useState("");
   const [customStart, setCustomStart] = useState("");
+  const [firstScrew, setFirstScrew] = useState("");
+  const [lastScrew, setLastScrew] = useState("");
+  const [desiredInterval, setDesiredInterval] = useState("");
   const [marks, setMarks] = useState<ImperialMeasurement[]>([]);
 
   const calculateMarks = () => {
     const newMarks: ImperialMeasurement[] = [];
 
-    if (mode === "divide") {
+    if (mode === "spacing") {
+      // Spacing mode: evenly space screws between start and end
+      const firstParsed = parseInput(firstScrew);
+      const lastParsed = parseInput(lastScrew);
+      const desiredParsed = parseInput(desiredInterval);
+
+      if (!firstParsed || !lastParsed || !desiredParsed) {
+        setMarks([]);
+        return;
+      }
+
+      const firstInches = toDecimalInches(firstParsed);
+      const lastInches = toDecimalInches(lastParsed);
+      const desiredInches = toDecimalInches(desiredParsed);
+
+      if (lastInches <= firstInches || desiredInches <= 0) {
+        setMarks([]);
+        return;
+      }
+
+      // Calculate span and number of intervals
+      const span = lastInches - firstInches;
+      const numIntervals = Math.round(span / desiredInches);
+
+      // Handle edge case where numIntervals is 0
+      if (numIntervals === 0) {
+        newMarks.push(toImperialMeasurement(firstInches));
+        newMarks.push(toImperialMeasurement(lastInches));
+      } else {
+        // Calculate actual spacing
+        const actualSpacing = span / numIntervals;
+
+        // Generate all screw positions (N+1 screws including start and end)
+        for (let i = 0; i <= numIntervals; i++) {
+          const position = firstInches + (actualSpacing * i);
+          newMarks.push(toImperialMeasurement(position));
+        }
+      }
+    } else if (mode === "divide") {
       // Divide mode: divide total length by number of divisions
       const totalParsed = parseInput(totalLength);
       const divisionsNum = parseInt(divisions);
@@ -60,7 +101,8 @@ export default function Intervals() {
 
       const intervalInches = toDecimalInches(intervalParsed);
       const startInches = startParsed ? toDecimalInches(startParsed) : 0;
-      const totalInches = totalParsed ? toDecimalInches(totalParsed) : Infinity;
+      // Default to 25' (300 inches) if no total length specified
+      const totalInches = totalParsed ? toDecimalInches(totalParsed) : 300;
 
       let currentPosition = startInches + intervalInches;
       while (currentPosition <= totalInches && newMarks.length < 100) {
@@ -78,6 +120,9 @@ export default function Intervals() {
     setOffset("");
     setCustomInterval("");
     setCustomStart("");
+    setFirstScrew("");
+    setLastScrew("");
+    setDesiredInterval("");
     setMarks([]);
   };
 
@@ -104,6 +149,13 @@ export default function Intervals() {
           {/* Mode Toggle */}
           <div className="mb-6 flex gap-2">
             <Button
+              variant={mode === "spacing" ? "default" : "outline"}
+              onClick={() => setMode("spacing")}
+              className="flex-1"
+            >
+              Even Spacing
+            </Button>
+            <Button
               variant={mode === "divide" ? "default" : "outline"}
               onClick={() => setMode("divide")}
               className="flex-1"
@@ -119,6 +171,42 @@ export default function Intervals() {
             </Button>
           </div>
 
+          {/* Spacing Mode Inputs */}
+          {mode === "spacing" && (
+            <div className="space-y-4 mb-6">
+              <div>
+                <Label htmlFor="firstScrew">First Screw Position</Label>
+                <Input
+                  id="firstScrew"
+                  value={firstScrew}
+                  onChange={(e) => setFirstScrew(e.target.value)}
+                  placeholder={'1"'}
+                  className="font-mono"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastScrew">Last Screw Position</Label>
+                <Input
+                  id="lastScrew"
+                  value={lastScrew}
+                  onChange={(e) => setLastScrew(e.target.value)}
+                  placeholder={'95"'}
+                  className="font-mono"
+                />
+              </div>
+              <div>
+                <Label htmlFor="desiredInterval">Desired Spacing (approximate)</Label>
+                <Input
+                  id="desiredInterval"
+                  value={desiredInterval}
+                  onChange={(e) => setDesiredInterval(e.target.value)}
+                  placeholder={'8"'}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Divide Mode Inputs */}
           {mode === "divide" && (
             <div className="space-y-4 mb-6">
@@ -128,7 +216,7 @@ export default function Intervals() {
                   id="totalLength"
                   value={totalLength}
                   onChange={(e) => setTotalLength(e.target.value)}
-                  placeholder="e.g., 96&quot; or 8' or 48 1/2&quot;"
+                  placeholder={'96" or 8\' or 48 1/2"'}
                   className="font-mono"
                 />
               </div>
@@ -139,7 +227,7 @@ export default function Intervals() {
                   type="number"
                   value={divisions}
                   onChange={(e) => setDivisions(e.target.value)}
-                  placeholder="e.g., 4"
+                  placeholder="4"
                 />
               </div>
               <div>
@@ -148,7 +236,7 @@ export default function Intervals() {
                   id="offset"
                   value={offset}
                   onChange={(e) => setOffset(e.target.value)}
-                  placeholder="e.g., 4&quot; (marks start after this point)"
+                  placeholder={'4"'}
                   className="font-mono"
                 />
               </div>
@@ -164,7 +252,7 @@ export default function Intervals() {
                   id="customInterval"
                   value={customInterval}
                   onChange={(e) => setCustomInterval(e.target.value)}
-                  placeholder="e.g., 10 3/4&quot;"
+                  placeholder={'10 3/4"'}
                   className="font-mono"
                 />
               </div>
@@ -174,7 +262,7 @@ export default function Intervals() {
                   id="customStart"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  placeholder="e.g., 3 1/4&quot; (default: 0&quot;)"
+                  placeholder={'Starts at 0" if blank'}
                   className="font-mono"
                 />
               </div>
@@ -184,7 +272,7 @@ export default function Intervals() {
                   id="totalLengthCustom"
                   value={totalLength}
                   onChange={(e) => setTotalLength(e.target.value)}
-                  placeholder="e.g., 96&quot; (leave blank for unlimited)"
+                  placeholder={"Defaults to 25' if blank"}
                   className="font-mono"
                 />
               </div>
@@ -223,7 +311,14 @@ export default function Intervals() {
           {/* Instructions */}
           <div className="mt-6 p-4 bg-muted/50 rounded-md">
             <p className="text-xs text-muted-foreground">
-              {mode === "divide" ? (
+              {mode === "spacing" ? (
+                <>
+                  <strong>Even Spacing:</strong> Place screws evenly between start and end points.
+                  Enter desired spacing (approximate) and get actual tape measure positions.
+                  <br />
+                  Example: First at 1&quot;, last at 95&quot;, ~8&quot; spacing = 13 screws at 7 13/16&quot; apart
+                </>
+              ) : mode === "divide" ? (
                 <>
                   <strong>Divide Length:</strong> Enter a total length and divide it into equal parts.
                   Add an offset to start marks after a specific point.
