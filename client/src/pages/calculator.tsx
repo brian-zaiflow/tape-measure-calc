@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CalculatorHelp } from "@/components/CalculatorHelp";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "wouter";
 import type {
   CalculatorState,
@@ -33,9 +34,29 @@ export default function Calculator() {
   });
 
   const [displayMode, setDisplayMode] = useState<DisplayMode>("fraction");
-  const [precision, setPrecision] = useState<Precision>(16);
-  const [reduceFractions, setReduceFractions] = useState<boolean>(true);
+
+  // Load settings from localStorage with defaults
+  const [precision, setPrecision] = useState<Precision>(() => {
+    const saved = localStorage.getItem('calculator-precision');
+    return saved === '32' ? 32 : 16;
+  });
+
+  const [reduceFractions, setReduceFractions] = useState<boolean>(() => {
+    const saved = localStorage.getItem('calculator-reduce-fractions');
+    return saved === null ? true : saved === 'true';
+  });
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Persist precision setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('calculator-precision', precision.toString());
+  }, [precision]);
+
+  // Persist reduceFractions setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('calculator-reduce-fractions', reduceFractions.toString());
+  }, [reduceFractions]);
 
   // Reformat display when precision or reduce setting changes
   useEffect(() => {
@@ -75,9 +96,18 @@ export default function Calculator() {
         newInput = '';
       }
 
-      // If clicking decimal point with no leading digit, prepend "0"
-      if (symbol === '.' && newInput === '') {
-        newInput = '0';
+      // Prevent multiple decimal points in the current number segment
+      if (symbol === '.') {
+        // Find the last number segment (after the last space or start of string)
+        const lastSegment = newInput.split(/\s+/).pop() || '';
+        // If the last segment already contains a decimal point, ignore this click
+        if (lastSegment.includes('.')) {
+          return prev;
+        }
+        // If clicking decimal point with no leading digit, prepend "0"
+        if (newInput === '') {
+          newInput = '0';
+        }
       }
 
       // If clicking a complete fraction (like "1/2") and current input ends with a digit, add space first
@@ -262,12 +292,15 @@ export default function Calculator() {
               </CollapsibleTrigger>
               <CalculatorHelp />
             </div>
-            <Link href="/intervals">
-              <Button variant="ghost" size="sm" className="h-8 px-2">
-                <Ruler className="w-4 h-4 mr-1" />
-                <span className="text-xs">Intervals</span>
-              </Button>
-            </Link>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Link href="/intervals">
+                <Button variant="ghost" size="sm" className="h-8 px-2">
+                  <Ruler className="w-4 h-4 mr-1" />
+                  <span className="text-xs">Intervals</span>
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <CollapsibleContent className="mt-3 space-y-3">
@@ -282,25 +315,6 @@ export default function Calculator() {
 
             {/* Settings Controls */}
             <div className="flex flex-col gap-2">
-              {/* <div className="flex gap-1 bg-muted rounded-md p-1">
-                <Button
-                  variant={displayMode === 'fraction' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setDisplayMode('fraction')}
-                  className="text-xs px-3 flex-1"
-                >
-                  Fraction
-                </Button>
-                <Button
-                  variant={displayMode === 'decimal' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setDisplayMode('decimal')}
-                  className="text-xs px-3 flex-1"
-                >
-                  Decimal
-                </Button>
-              </div> */}
-
               <div className="flex gap-2">
                 <div className="flex gap-1 bg-muted rounded-md p-1 flex-1">
                   <Button
@@ -344,24 +358,28 @@ export default function Calculator() {
           </CollapsibleContent>
         </Collapsible>
 
-        <Card className="p-4 shadow-lg flex-1 flex flex-col">
+        <Card className="p-4 shadow-2xl flex-1 flex flex-col bg-gradient-to-br from-card via-card to-card/95 border-2 backdrop-blur-sm">
           {/* Display */}
-          <div className="mb-4 bg-gradient-to-br from-muted/50 to-muted rounded-lg p-4 min-h-28 flex flex-col justify-end border-2 border-border/50">
+          <div className="mb-4 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/10 dark:from-primary/10 dark:via-primary/15 dark:to-accent/15 rounded-xl p-5 min-h-32 flex flex-col justify-end border-2 border-primary/20 dark:border-primary/30 shadow-inner backdrop-blur-sm transition-all duration-300">
             {showOperation && (
-              <div className="text-base text-muted-foreground font-mono mb-2 text-right" data-testid="text-previous-value">
-                {displayMode === 'decimal'
-                  ? formatAsDecimal(state.previousValue!)
-                  : formatImperialMeasurement(state.previousValue!)
-                } {
-                  state.operation === 'add' ? '+' :
-                  state.operation === 'subtract' ? '−' :
-                  state.operation === 'multiply' ? '×' :
-                  state.operation === 'divide' ? '÷' : ''
-                }
+              <div className="text-base text-muted-foreground/80 font-mono mb-2 text-right animate-in fade-in slide-in-from-top-2 duration-300" data-testid="text-previous-value">
+                <span className="text-primary/90 font-semibold">
+                  {displayMode === 'decimal'
+                    ? formatAsDecimal(state.previousValue!)
+                    : formatImperialMeasurement(state.previousValue!)
+                  }
+                </span>
+                <span className="mx-2 text-primary">
+                  {state.operation === 'add' ? '+' :
+                   state.operation === 'subtract' ? '−' :
+                   state.operation === 'multiply' ? '×' :
+                   state.operation === 'divide' ? '÷' : ''
+                  }
+                </span>
               </div>
             )}
             <div
-              className="text-4xl font-bold text-foreground font-mono text-right break-all"
+              className="text-5xl font-bold bg-gradient-to-r from-foreground to-foreground/90 bg-clip-text text-transparent font-mono text-right break-all transition-all duration-200"
               data-testid="text-display"
             >
               {formatDisplay(currentDisplay)}
@@ -374,7 +392,7 @@ export default function Calculator() {
             <Button
               variant="destructive"
               onClick={handleClear}
-              className="min-h-14 text-lg font-semibold"
+              className="min-h-14 text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-95"
               data-testid="button-clear"
             >
               C
@@ -382,7 +400,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={handleDelete}
-              className="min-h-14"
+              className="min-h-14 shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
               data-testid="button-delete"
             >
               <Delete className="w-5 h-5" />
@@ -390,7 +408,7 @@ export default function Calculator() {
             <Button
               variant="secondary"
               onClick={() => handleSymbolClick("'")}
-              className="min-h-14 text-lg font-semibold"
+              className="min-h-14 text-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
               data-testid="button-feet"
             >
               '
@@ -398,7 +416,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'divide' ? 'default' : 'secondary'}
               onClick={() => handleOperation('divide')}
-              className="min-h-14"
+              className="min-h-14 shadow-sm hover:shadow-md transition-all duration-200 active:scale-95"
               data-testid="button-divide"
             >
               <Divide className="w-5 h-5" />
@@ -408,7 +426,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('7')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-7"
             >
               7
@@ -416,7 +434,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('8')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-8"
             >
               8
@@ -424,7 +442,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('9')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-9"
             >
               9
@@ -432,7 +450,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'multiply' ? 'default' : 'secondary'}
               onClick={() => handleOperation('multiply')}
-              className="min-h-14"
+              className="min-h-14 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-multiply"
             >
               <X className="w-5 h-5" />
@@ -441,7 +459,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('4')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-4"
             >
               4
@@ -449,7 +467,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('5')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-5"
             >
               5
@@ -457,7 +475,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('6')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-6"
             >
               6
@@ -465,7 +483,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'subtract' ? 'default' : 'secondary'}
               onClick={() => handleOperation('subtract')}
-              className="min-h-14"
+              className="min-h-14 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-subtract"
             >
               <Minus className="w-5 h-5" />
@@ -474,7 +492,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('1')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-1"
             >
               1
@@ -482,7 +500,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('2')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-2"
             >
               2
@@ -490,7 +508,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('3')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-3"
             >
               3
@@ -498,7 +516,7 @@ export default function Calculator() {
             <Button
               variant={state.operation === 'add' ? 'default' : 'secondary'}
               onClick={() => handleOperation('add')}
-              className="min-h-14"
+              className="min-h-14 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-add"
             >
               <Plus className="w-5 h-5" />
@@ -508,7 +526,7 @@ export default function Calculator() {
             <Button
               variant="outline"
               onClick={() => handleNumberClick('0')}
-              className="min-h-14 text-xl font-semibold"
+              className="min-h-14 text-xl font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
               data-testid="button-0"
             >
               0
@@ -558,23 +576,23 @@ export default function Calculator() {
               <div className="flex-1 h-px bg-border ml-2"></div>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
-            <Button variant="outline" onClick={() => handleSymbolClick('1/16')} className="min-h-10 text-xs hover:bg-accent">1/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/8')} className="min-h-10 text-xs hover:bg-accent">1/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/16')} className="min-h-10 text-xs hover:bg-accent">3/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/4')} className="min-h-10 text-xs hover:bg-accent">1/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/16')} className="min-h-10 text-xs hover:bg-accent">5/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">1/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/8')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">1/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">3/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/4')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">1/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">5/16"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('3/8')} className="min-h-10 text-xs hover:bg-accent">3/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/16')} className="min-h-10 text-xs hover:bg-accent">7/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('1/2')} className="min-h-10 text-xs hover:bg-accent">1/2"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('9/16')} className="min-h-10 text-xs hover:bg-accent">9/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('5/8')} className="min-h-10 text-xs hover:bg-accent">5/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/8')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">3/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">7/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('1/2')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">1/2"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('9/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">9/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('5/8')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">5/8"</Button>
 
-            <Button variant="outline" onClick={() => handleSymbolClick('11/16')} className="min-h-10 text-xs hover:bg-accent">11/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('3/4')} className="min-h-10 text-xs hover:bg-accent">3/4"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('13/16')} className="min-h-10 text-xs hover:bg-accent">13/16"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('7/8')} className="min-h-10 text-xs hover:bg-accent">7/8"</Button>
-            <Button variant="outline" onClick={() => handleSymbolClick('15/16')} className="min-h-10 text-xs hover:bg-accent">15/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('11/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">11/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('3/4')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">3/4"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('13/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">13/16"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('7/8')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">7/8"</Button>
+            <Button variant="outline" onClick={() => handleSymbolClick('15/16')} className="min-h-10 text-xs hover:bg-accent shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 active:scale-95">15/16"</Button>
             </div>
           </div>
         </Card>

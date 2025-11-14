@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "wouter";
 import { Calculator, ArrowLeft } from "lucide-react";
 import type { ImperialMeasurement } from "@/types";
@@ -131,12 +132,15 @@ export default function Intervals() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Calculator
-            </Button>
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Calculator
+              </Button>
+            </Link>
+            <ThemeToggle />
+          </div>
           <h1 className="text-2xl font-semibold text-foreground mb-1 text-center">
             Tape Measure Intervals
           </h1>
