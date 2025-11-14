@@ -65,20 +65,20 @@
       const canvas = document.getElementById(canvasId);
       const ctx = canvas.getContext('2d');
 
-      // Background
-      ctx.fillStyle = '#2563eb';
+      // Construction orange background
+      ctx.fillStyle = '#f97316';
       ctx.fillRect(0, 0, size, size);
 
-      // Draw ruler icon
-      ctx.strokeStyle = '#ffffff';
-      ctx.fillStyle = '#ffffff';
+      // Draw ruler icon - centered
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.fillStyle = '#1a1a1a';
       ctx.lineWidth = size * 0.04;
 
-      // Main ruler rectangle
+      // Main ruler rectangle - centered vertically
       const rulerWidth = size * 0.6;
       const rulerHeight = size * 0.15;
       const x = (size - rulerWidth) / 2;
-      const y = (size - rulerHeight) / 2;
+      const y = size * 0.25; // Position ruler higher to center overall content
 
       ctx.strokeRect(x, y, rulerWidth, rulerHeight);
 
@@ -96,12 +96,12 @@
         ctx.stroke();
       }
 
-      // Text
+      // Text - centered below ruler
       ctx.font = `bold ${size * 0.12}px system-ui`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('TAPE', size / 2, y + rulerHeight + size * 0.15);
-      ctx.fillText('CALC', size / 2, y + rulerHeight + size * 0.28);
+      ctx.fillText('TAPE', size / 2, y + rulerHeight + size * 0.13);
+      ctx.fillText('CALC', size / 2, y + rulerHeight + size * 0.26);
     }
 
     function downloadIcon(canvasId, filename) {
