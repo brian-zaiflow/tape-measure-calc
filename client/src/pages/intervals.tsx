@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "wouter";
-import { Calculator, ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown, AlertCircle } from "lucide-react";
 import type { ImperialMeasurement } from "@/types";
 import {
   parseInput,
@@ -14,117 +15,189 @@ import {
   toImperialMeasurement,
 } from "@/lib/fraction-math";
 
-type Mode = "divide" | "custom" | "spacing";
+type Mode = "fastener" | "divide";
 
 export default function Intervals() {
-  const [mode, setMode] = useState<Mode>("spacing");
+  const [mode, setMode] = useState<Mode>("fastener");
+
+  // Fastener Spacing mode
+  const [spacing, setSpacing] = useState("8\"");
+  const [boardLength, setBoardLength] = useState("");
+  const [startOffset, setStartOffset] = useState("1\"");
+  const [endOffset, setEndOffset] = useState("1\"");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Divide mode
   const [totalLength, setTotalLength] = useState("");
-  const [divisions, setDivisions] = useState("");
-  const [offset, setOffset] = useState("");
-  const [customInterval, setCustomInterval] = useState("");
-  const [customStart, setCustomStart] = useState("");
-  const [firstScrew, setFirstScrew] = useState("");
-  const [lastScrew, setLastScrew] = useState("");
-  const [desiredInterval, setDesiredInterval] = useState("");
+  const [numSections, setNumSections] = useState("");
+  const [divideOffset, setDivideOffset] = useState("");
+
   const [marks, setMarks] = useState<ImperialMeasurement[]>([]);
+  const [summary, setSummary] = useState({
+    count: 0,
+    actualSpacing: 0,
+    desiredSpacing: 0,
+    unusedLength: 0,
+    span: 0,
+    hasWarning: false,
+    warningMessage: ""
+  });
+
+  // Auto-calculate when inputs change
+  useEffect(() => {
+    calculateMarks();
+  }, [mode, spacing, boardLength, startOffset, endOffset, totalLength, numSections, divideOffset]);
 
   const calculateMarks = () => {
     const newMarks: ImperialMeasurement[] = [];
+    let newSummary = {
+      count: 0,
+      actualSpacing: 0,
+      desiredSpacing: 0,
+      unusedLength: 0,
+      span: 0,
+      hasWarning: false,
+      warningMessage: ""
+    };
 
-    if (mode === "spacing") {
-      // Spacing mode: evenly space screws between start and end
-      const firstParsed = parseInput(firstScrew);
-      const lastParsed = parseInput(lastScrew);
-      const desiredParsed = parseInput(desiredInterval);
+    if (mode === "fastener") {
+      // Fastener Spacing mode: place fasteners at regular intervals
+      const spacingParsed = parseInput(spacing);
+      const boardParsed = boardLength ? parseInput(boardLength) : null;
+      const startParsed = parseInput(startOffset);
+      const endParsed = parseInput(endOffset);
 
-      if (!firstParsed || !lastParsed || !desiredParsed) {
+      if (!spacingParsed || !boardParsed || !startParsed || !endParsed) {
         setMarks([]);
+        setSummary(newSummary);
         return;
       }
 
-      const firstInches = toDecimalInches(firstParsed);
-      const lastInches = toDecimalInches(lastParsed);
-      const desiredInches = toDecimalInches(desiredParsed);
+      const spacingInches = toDecimalInches(spacingParsed);
+      const boardInches = toDecimalInches(boardParsed);
+      const startInches = toDecimalInches(startParsed);
+      const endInches = toDecimalInches(endParsed);
 
-      if (lastInches <= firstInches || desiredInches <= 0) {
+      if (spacingInches <= 0 || boardInches <= 0 || startInches < 0 || endInches < 0) {
         setMarks([]);
+        setSummary(newSummary);
         return;
       }
 
-      // Calculate span and number of intervals
-      const span = lastInches - firstInches;
-      const numIntervals = Math.round(span / desiredInches);
+      // Calculate available length for fasteners
+      const availableLength = boardInches - startInches - endInches;
 
-      // Handle edge case where numIntervals is 0
-      if (numIntervals === 0) {
-        newMarks.push(toImperialMeasurement(firstInches));
-        newMarks.push(toImperialMeasurement(lastInches));
-      } else {
-        // Calculate actual spacing
-        const actualSpacing = span / numIntervals;
-
-        // Generate all screw positions (N+1 screws including start and end)
-        for (let i = 0; i <= numIntervals; i++) {
-          const position = firstInches + (actualSpacing * i);
-          newMarks.push(toImperialMeasurement(position));
-        }
+      if (availableLength <= 0) {
+        newSummary.hasWarning = true;
+        newSummary.warningMessage = "Offsets are too large for board length";
+        setMarks([]);
+        setSummary(newSummary);
+        return;
       }
-    } else if (mode === "divide") {
-      // Divide mode: divide total length by number of divisions
+
+      // Calculate number of intervals and actual spacing
+      const numIntervals = Math.floor(availableLength / spacingInches);
+      const numFasteners = numIntervals + 1; // Including first position
+
+      // Generate positions
+      let currentPosition = startInches;
+      for (let i = 0; i < numFasteners; i++) {
+        newMarks.push(toImperialMeasurement(currentPosition));
+        currentPosition += spacingInches;
+      }
+
+      // Calculate unused length
+      const lastPosition = startInches + (numIntervals * spacingInches);
+      const unusedLength = boardInches - lastPosition - endInches;
+
+      newSummary = {
+        count: numFasteners,
+        actualSpacing: spacingInches,
+        desiredSpacing: spacingInches,
+        unusedLength: Math.max(0, unusedLength),
+        span: lastPosition - startInches,
+        hasWarning: false,
+        warningMessage: ""
+      };
+
+      // Add warnings
+      if (unusedLength < 0) {
+        newSummary.hasWarning = true;
+        newSummary.warningMessage = `Last fastener extends ${Math.abs(unusedLength).toFixed(2)}" beyond board`;
+      } else if (unusedLength > spacingInches * 0.75) {
+        newSummary.hasWarning = true;
+        newSummary.warningMessage = `${unusedLength.toFixed(2)}" unused - consider adding one more fastener`;
+      }
+
+    } else {
+      // Divide mode: divide length into equal sections
       const totalParsed = parseInput(totalLength);
-      const divisionsNum = parseInt(divisions);
-      const offsetParsed = offset ? parseInput(offset) : null;
+      const sectionsNum = parseInt(numSections);
+      const offsetParsed = divideOffset ? parseInput(divideOffset) : null;
 
-      if (!totalParsed || !divisionsNum || divisionsNum <= 0) {
+      if (!totalParsed || !sectionsNum || sectionsNum <= 0) {
         setMarks([]);
+        setSummary(newSummary);
         return;
       }
 
       const totalInches = toDecimalInches(totalParsed);
       const offsetInches = offsetParsed ? toDecimalInches(offsetParsed) : 0;
       const availableLength = totalInches - offsetInches;
-      const intervalSize = availableLength / divisionsNum;
 
-      for (let i = 1; i <= divisionsNum; i++) {
-        const markPosition = offsetInches + (intervalSize * i);
-        newMarks.push(toImperialMeasurement(markPosition));
-      }
-    } else {
-      // Custom mode: custom interval and custom start
-      const intervalParsed = parseInput(customInterval);
-      const startParsed = customStart ? parseInput(customStart) : null;
-      const totalParsed = totalLength ? parseInput(totalLength) : null;
-
-      if (!intervalParsed) {
+      if (availableLength <= 0) {
         setMarks([]);
+        setSummary(newSummary);
         return;
       }
 
-      const intervalInches = toDecimalInches(intervalParsed);
-      const startInches = startParsed ? toDecimalInches(startParsed) : 0;
-      // Default to 25' (300 inches) if no total length specified
-      const totalInches = totalParsed ? toDecimalInches(totalParsed) : 300;
+      const sectionSize = availableLength / sectionsNum;
 
-      let currentPosition = startInches + intervalInches;
-      while (currentPosition <= totalInches && newMarks.length < 100) {
-        newMarks.push(toImperialMeasurement(currentPosition));
-        currentPosition += intervalInches;
+      // Generate cut marks (N-1 marks for N sections)
+      for (let i = 1; i <= sectionsNum; i++) {
+        const markPosition = offsetInches + (sectionSize * i);
+        if (markPosition <= totalInches) {
+          newMarks.push(toImperialMeasurement(markPosition));
+        }
       }
+
+      newSummary = {
+        count: newMarks.length,
+        actualSpacing: sectionSize,
+        desiredSpacing: sectionSize,
+        unusedLength: 0,
+        span: availableLength,
+        hasWarning: false,
+        warningMessage: ""
+      };
     }
 
     setMarks(newMarks);
+    setSummary(newSummary);
+  };
+
+  const handlePreset = (presetSpacing: string) => {
+    setSpacing(presetSpacing);
   };
 
   const clearAll = () => {
+    setSpacing("8\"");
+    setBoardLength("");
+    setStartOffset("1\"");
+    setEndOffset("1\"");
     setTotalLength("");
-    setDivisions("");
-    setOffset("");
-    setCustomInterval("");
-    setCustomStart("");
-    setFirstScrew("");
-    setLastScrew("");
-    setDesiredInterval("");
+    setNumSections("");
+    setDivideOffset("");
     setMarks([]);
+    setSummary({
+      count: 0,
+      actualSpacing: 0,
+      desiredSpacing: 0,
+      unusedLength: 0,
+      span: 0,
+      hasWarning: false,
+      warningMessage: ""
+    });
   };
 
   return (
@@ -142,199 +215,268 @@ export default function Intervals() {
             <ThemeToggle />
           </div>
           <h1 className="text-2xl font-semibold text-foreground mb-1 text-center">
-            Tape Measure Intervals
+            Fastener & Interval Calculator
           </h1>
           <p className="text-sm text-muted-foreground text-center">
-            Divide lengths & generate evenly spaced marks
+            Mark screws at regular intervals or divide lengths evenly
           </p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 shadow-xl">
           {/* Mode Toggle */}
           <div className="mb-6 flex gap-2">
             <Button
-              variant={mode === "spacing" ? "default" : "outline"}
-              onClick={() => setMode("spacing")}
-              className="flex-1"
+              variant={mode === "fastener" ? "default" : "outline"}
+              onClick={() => setMode("fastener")}
+              className="flex-1 transition-all duration-200"
             >
-              Even Spacing
+              📌 Fastener Spacing
             </Button>
             <Button
               variant={mode === "divide" ? "default" : "outline"}
               onClick={() => setMode("divide")}
-              className="flex-1"
+              className="flex-1 transition-all duration-200"
             >
-              Divide Length
-            </Button>
-            <Button
-              variant={mode === "custom" ? "default" : "outline"}
-              onClick={() => setMode("custom")}
-              className="flex-1"
-            >
-              Custom Interval
+              ✂️ Divide Evenly
             </Button>
           </div>
 
-          {/* Spacing Mode Inputs */}
-          {mode === "spacing" && (
+          {/* Fastener Spacing Mode */}
+          {mode === "fastener" && (
             <div className="space-y-4 mb-6">
+              {/* Quick Presets */}
               <div>
-                <Label htmlFor="firstScrew">First Screw Position</Label>
+                <Label className="mb-2 block text-xs text-muted-foreground">Quick Presets</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {["16\"", "12\"", "8\"", "6\""].map((preset) => (
+                    <Button
+                      key={preset}
+                      variant={spacing === preset ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePreset(preset)}
+                      className="text-xs"
+                    >
+                      {preset} {preset === "16\"" ? "OC" : preset === "8\"" ? "(Common)" : ""}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Primary Inputs */}
+              <div>
+                <Label htmlFor="spacing" className="text-base font-semibold">
+                  Fastener Spacing <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  id="firstScrew"
-                  value={firstScrew}
-                  onChange={(e) => setFirstScrew(e.target.value)}
-                  placeholder={'1"'}
-                  className="font-mono"
+                  id="spacing"
+                  value={spacing}
+                  onChange={(e) => setSpacing(e.target.value)}
+                  placeholder='8" (most common for drywall)'
+                  className="font-mono text-lg mt-1"
                 />
               </div>
+
               <div>
-                <Label htmlFor="lastScrew">Last Screw Position</Label>
+                <Label htmlFor="boardLength" className="text-base font-semibold">
+                  Board Length <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  id="lastScrew"
-                  value={lastScrew}
-                  onChange={(e) => setLastScrew(e.target.value)}
-                  placeholder={'95"'}
-                  className="font-mono"
+                  id="boardLength"
+                  value={boardLength}
+                  onChange={(e) => setBoardLength(e.target.value)}
+                  placeholder={'96" or 8\' or 48 1/2"'}
+                  className="font-mono text-lg mt-1"
                 />
               </div>
-              <div>
-                <Label htmlFor="desiredInterval">Desired Spacing (approximate)</Label>
-                <Input
-                  id="desiredInterval"
-                  value={desiredInterval}
-                  onChange={(e) => setDesiredInterval(e.target.value)}
-                  placeholder={'8"'}
-                  className="font-mono"
-                />
-              </div>
+
+              {/* Advanced Options */}
+              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    <span className="text-xs">Advanced Options</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-4">
+                  <div>
+                    <Label htmlFor="startOffset" className="text-sm">
+                      Start Offset (from edge)
+                    </Label>
+                    <Input
+                      id="startOffset"
+                      value={startOffset}
+                      onChange={(e) => setStartOffset(e.target.value)}
+                      placeholder='1" (typical edge clearance)'
+                      className="font-mono mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="endOffset" className="text-sm">
+                      End Offset (from edge)
+                    </Label>
+                    <Input
+                      id="endOffset"
+                      value={endOffset}
+                      onChange={(e) => setEndOffset(e.target.value)}
+                      placeholder='1" (typical edge clearance)'
+                      className="font-mono mt-1"
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
 
-          {/* Divide Mode Inputs */}
+          {/* Divide Mode */}
           {mode === "divide" && (
             <div className="space-y-4 mb-6">
               <div>
-                <Label htmlFor="totalLength">Total Length</Label>
+                <Label htmlFor="totalLength" className="text-base font-semibold">
+                  Total Length <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="totalLength"
                   value={totalLength}
                   onChange={(e) => setTotalLength(e.target.value)}
                   placeholder={'96" or 8\' or 48 1/2"'}
-                  className="font-mono"
+                  className="font-mono text-lg mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="divisions">Divide Into (number of parts)</Label>
+                <Label htmlFor="numSections" className="text-base font-semibold">
+                  Number of Sections <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  id="divisions"
+                  id="numSections"
                   type="number"
-                  value={divisions}
-                  onChange={(e) => setDivisions(e.target.value)}
+                  value={numSections}
+                  onChange={(e) => setNumSections(e.target.value)}
                   placeholder="4"
+                  className="text-lg mt-1"
+                  min="1"
                 />
               </div>
               <div>
-                <Label htmlFor="offset">Starting Offset (optional)</Label>
+                <Label htmlFor="divideOffset" className="text-sm">
+                  Starting Offset (optional)
+                </Label>
                 <Input
-                  id="offset"
-                  value={offset}
-                  onChange={(e) => setOffset(e.target.value)}
-                  placeholder={'4"'}
-                  className="font-mono"
+                  id="divideOffset"
+                  value={divideOffset}
+                  onChange={(e) => setDivideOffset(e.target.value)}
+                  placeholder='4" (optional)'
+                  className="font-mono mt-1"
                 />
               </div>
             </div>
           )}
 
-          {/* Custom Mode Inputs */}
-          {mode === "custom" && (
-            <div className="space-y-4 mb-6">
-              <div>
-                <Label htmlFor="customInterval">Interval Between Marks</Label>
-                <Input
-                  id="customInterval"
-                  value={customInterval}
-                  onChange={(e) => setCustomInterval(e.target.value)}
-                  placeholder={'10 3/4"'}
-                  className="font-mono"
-                />
-              </div>
-              <div>
-                <Label htmlFor="customStart">Starting Point (optional)</Label>
-                <Input
-                  id="customStart"
-                  value={customStart}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                  placeholder={'Starts at 0" if blank'}
-                  className="font-mono"
-                />
-              </div>
-              <div>
-                <Label htmlFor="totalLengthCustom">Total Length (optional)</Label>
-                <Input
-                  id="totalLengthCustom"
-                  value={totalLength}
-                  onChange={(e) => setTotalLength(e.target.value)}
-                  placeholder={"Defaults to 25' if blank"}
-                  className="font-mono"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 mb-6">
-            <Button onClick={calculateMarks} className="flex-1">
-              Calculate Marks
-            </Button>
-            <Button onClick={clearAll} variant="outline">
-              Clear
+          {/* Clear Button */}
+          <div className="mb-6">
+            <Button onClick={clearAll} variant="outline" className="w-full">
+              Clear All
             </Button>
           </div>
 
-          {/* Results */}
+          {/* Results Summary */}
           {marks.length > 0 && (
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
-                Mark Positions ({marks.length} marks):
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {marks.map((mark, index) => (
-                  <div
-                    key={index}
-                    className="bg-background rounded px-3 py-2 text-center font-mono font-semibold"
-                  >
-                    {formatImperialMeasurement(mark)}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <>
+              <Card className="p-4 bg-primary/5 border-primary/20 mb-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <span className="text-sm">Layout Summary</span>
+                </h3>
+                <div className="space-y-1.5 text-sm">
+                  <p className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      {mode === "fastener" ? "Fasteners:" : "Cut marks:"}
+                    </span>
+                    <span className="font-semibold">{summary.count}</span>
+                  </p>
+                  {mode === "fastener" ? (
+                    <>
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">Actual spacing:</span>
+                        <span className="font-semibold font-mono">
+                          {formatImperialMeasurement(toImperialMeasurement(summary.actualSpacing))}
+                        </span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">Span:</span>
+                        <span className="font-semibold font-mono">
+                          {formatImperialMeasurement(toImperialMeasurement(summary.span))}
+                        </span>
+                      </p>
+                      {summary.unusedLength > 0 && (
+                        <p className="flex justify-between text-amber-600 dark:text-amber-500">
+                          <span>Unused at end:</span>
+                          <span className="font-semibold font-mono">
+                            {formatImperialMeasurement(toImperialMeasurement(summary.unusedLength))}
+                          </span>
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="flex justify-between">
+                      <span className="text-muted-foreground">Section size:</span>
+                      <span className="font-semibold font-mono">
+                        {formatImperialMeasurement(toImperialMeasurement(summary.actualSpacing))}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </Card>
+
+              {/* Warning */}
+              {summary.hasWarning && (
+                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-amber-600 dark:text-amber-500">
+                    {summary.warningMessage}
+                  </p>
+                </div>
+              )}
+
+              {/* Mark Positions */}
+              <Card className="p-4 bg-muted/50">
+                <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
+                  {mode === "fastener" ? "Fastener Positions:" : "Cut Mark Positions:"}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {marks.map((mark, index) => (
+                    <div
+                      key={index}
+                      className="bg-background rounded-lg px-3 py-2.5 text-center font-mono font-semibold shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                      onClick={() => navigator.clipboard.writeText(formatImperialMeasurement(mark))}
+                      title="Click to copy"
+                    >
+                      {formatImperialMeasurement(mark)}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
           )}
 
           {/* Instructions */}
-          <div className="mt-6 p-4 bg-muted/50 rounded-md">
-            <p className="text-xs text-muted-foreground">
-              {mode === "spacing" ? (
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {mode === "fastener" ? (
                 <>
-                  <strong>Even Spacing:</strong> Place screws evenly between start and end points.
-                  Enter desired spacing (approximate) and get actual tape measure positions.
+                  <strong className="text-foreground">Fastener Spacing:</strong> Mark positions for screws or nails at regular intervals.
+                  Enter your desired spacing and board length. Offsets add clearance from edges (typically 1").
                   <br />
-                  Example: First at 1&quot;, last at 95&quot;, ~8&quot; spacing = 13 screws at 7 13/16&quot; apart
-                </>
-              ) : mode === "divide" ? (
-                <>
-                  <strong>Divide Length:</strong> Enter a total length and divide it into equal parts.
-                  Add an offset to start marks after a specific point.
-                  <br />
-                  Example: 96&quot; ÷ 4 = marks at 24&quot;, 48&quot;, 72&quot;, 96&quot;
+                  <span className="text-muted-foreground/70">
+                    Example: 8" spacing on 96" board with 1" offsets = 12 fasteners from 1" to 89"
+                  </span>
                 </>
               ) : (
                 <>
-                  <strong>Custom Interval:</strong> Set a specific distance between marks and
-                  optionally a starting point.
+                  <strong className="text-foreground">Divide Evenly:</strong> Split a length into equal sections.
+                  Enter total length and number of sections needed. Marks show where to cut.
                   <br />
-                  Example: 10 3/4&quot; interval starting at 3 1/4&quot; = marks at 14&quot;, 24 3/4&quot;, 35 1/2&quot;...
+                  <span className="text-muted-foreground/70">
+                    Example: 96" ÷ 4 sections = cut marks at 24", 48", 72"
+                  </span>
                 </>
               )}
             </p>
