@@ -15,7 +15,7 @@ import {
   toImperialMeasurement,
 } from "@/lib/fraction-math";
 
-type Mode = "fastener" | "divide";
+type Mode = "fastener" | "divide" | "exact";
 
 export default function Intervals() {
   const [mode, setMode] = useState<Mode>("fastener");
@@ -32,6 +32,11 @@ export default function Intervals() {
   const [numSections, setNumSections] = useState("");
   const [divideOffset, setDivideOffset] = useState("");
 
+  // Exact Count mode
+  const [exactBoardLength, setExactBoardLength] = useState("");
+  const [exactOffset, setExactOffset] = useState("4\"");
+  const [exactNumScrews, setExactNumScrews] = useState("");
+
   const [marks, setMarks] = useState<ImperialMeasurement[]>([]);
   const [summary, setSummary] = useState({
     count: 0,
@@ -46,7 +51,7 @@ export default function Intervals() {
   // Auto-calculate when inputs change
   useEffect(() => {
     calculateMarks();
-  }, [mode, spacing, boardLength, startOffset, endOffset, totalLength, numSections, divideOffset]);
+  }, [mode, spacing, boardLength, startOffset, endOffset, totalLength, numSections, divideOffset, exactBoardLength, exactOffset, exactNumScrews]);
 
   const calculateMarks = () => {
     const newMarks: ImperialMeasurement[] = [];
@@ -129,6 +134,68 @@ export default function Intervals() {
         newSummary.warningMessage = `${unusedLength.toFixed(2)}" unused - consider adding one more fastener`;
       }
 
+    } else if (mode === "exact") {
+      // Exact Count mode: place exact number of screws with calculated spacing
+      const boardParsed = parseInput(exactBoardLength);
+      const offsetParsed = parseInput(exactOffset);
+      const numScrews = parseInt(exactNumScrews);
+
+      if (!boardParsed || !offsetParsed || !numScrews || numScrews <= 0) {
+        setMarks([]);
+        setSummary(newSummary);
+        return;
+      }
+
+      const boardInches = toDecimalInches(boardParsed);
+      const offsetInches = toDecimalInches(offsetParsed);
+
+      if (boardInches <= 0 || offsetInches < 0) {
+        setMarks([]);
+        setSummary(newSummary);
+        return;
+      }
+
+      // Validate: offset can't be more than half the board length
+      if (offsetInches * 2 >= boardInches) {
+        newSummary.hasWarning = true;
+        newSummary.warningMessage = "Offset is too large - must be less than half the board length";
+        setMarks([]);
+        setSummary(newSummary);
+        return;
+      }
+
+      // Validate: need at least 2 screws
+      if (numScrews < 2) {
+        newSummary.hasWarning = true;
+        newSummary.warningMessage = "Need at least 2 screws for this mode";
+        setMarks([]);
+        setSummary(newSummary);
+        return;
+      }
+
+      // Calculate positions
+      const firstPosition = offsetInches;
+      const lastPosition = boardInches - offsetInches;
+      const span = lastPosition - firstPosition;
+      const numIntervals = numScrews - 1;
+      const actualSpacing = span / numIntervals;
+
+      // Generate screw positions
+      for (let i = 0; i < numScrews; i++) {
+        const position = firstPosition + (actualSpacing * i);
+        newMarks.push(toImperialMeasurement(position));
+      }
+
+      newSummary = {
+        count: numScrews,
+        actualSpacing: actualSpacing,
+        desiredSpacing: actualSpacing,
+        unusedLength: 0,
+        span: span,
+        hasWarning: false,
+        warningMessage: ""
+      };
+
     } else {
       // Divide mode: divide length into equal sections
       const totalParsed = parseInput(totalLength);
@@ -188,6 +255,9 @@ export default function Intervals() {
     setTotalLength("");
     setNumSections("");
     setDivideOffset("");
+    setExactBoardLength("");
+    setExactOffset("4\"");
+    setExactNumScrews("");
     setMarks([]);
     setSummary({
       count: 0,
@@ -218,7 +288,7 @@ export default function Intervals() {
             Fastener & Interval Calculator
           </h1>
           <p className="text-sm text-muted-foreground text-center">
-            Mark screws at regular intervals or divide lengths evenly
+            Place screws at regular intervals, exact counts, or divide lengths evenly
           </p>
         </div>
 
@@ -231,6 +301,13 @@ export default function Intervals() {
               className="flex-1 transition-all duration-200"
             >
               📌 Fastener Spacing
+            </Button>
+            <Button
+              variant={mode === "exact" ? "default" : "outline"}
+              onClick={() => setMode("exact")}
+              className="flex-1 transition-all duration-200"
+            >
+              🎯 Exact Count
             </Button>
             <Button
               variant={mode === "divide" ? "default" : "outline"}
@@ -371,6 +448,53 @@ export default function Intervals() {
             </div>
           )}
 
+          {/* Exact Count Mode */}
+          {mode === "exact" && (
+            <div className="space-y-4 mb-6">
+              <div>
+                <Label htmlFor="exactBoardLength" className="text-base font-semibold">
+                  Board Length <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="exactBoardLength"
+                  value={exactBoardLength}
+                  onChange={(e) => setExactBoardLength(e.target.value)}
+                  placeholder={'30 3/8" or 96" or 8\''}
+                  className="font-mono text-lg mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="exactOffset" className="text-base font-semibold">
+                  Edge Offset <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="exactOffset"
+                  value={exactOffset}
+                  onChange={(e) => setExactOffset(e.target.value)}
+                  placeholder='4" (offset from both edges)'
+                  className="font-mono text-lg mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Distance from each edge to first/last screw
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="exactNumScrews" className="text-base font-semibold">
+                  Number of Screws <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="exactNumScrews"
+                  type="number"
+                  value={exactNumScrews}
+                  onChange={(e) => setExactNumScrews(e.target.value)}
+                  placeholder="5"
+                  className="text-lg mt-1"
+                  min="2"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Clear Button */}
           <div className="mb-6">
             <Button onClick={clearAll} variant="outline" className="w-full">
@@ -388,7 +512,7 @@ export default function Intervals() {
                 <div className="space-y-1.5 text-sm">
                   <p className="flex justify-between">
                     <span className="text-muted-foreground">
-                      {mode === "fastener" ? "Fasteners:" : "Cut marks:"}
+                      {mode === "fastener" ? "Fasteners:" : mode === "exact" ? "Screws:" : "Cut marks:"}
                     </span>
                     <span className="font-semibold">{summary.count}</span>
                   </p>
@@ -415,6 +539,21 @@ export default function Intervals() {
                         </p>
                       )}
                     </>
+                  ) : mode === "exact" ? (
+                    <>
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">Calculated spacing:</span>
+                        <span className="font-semibold font-mono">
+                          {formatImperialMeasurement(toImperialMeasurement(summary.actualSpacing))}
+                        </span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">Span:</span>
+                        <span className="font-semibold font-mono">
+                          {formatImperialMeasurement(toImperialMeasurement(summary.span))}
+                        </span>
+                      </p>
+                    </>
                   ) : (
                     <p className="flex justify-between">
                       <span className="text-muted-foreground">Section size:</span>
@@ -439,7 +578,7 @@ export default function Intervals() {
               {/* Mark Positions */}
               <Card className="p-4 bg-muted/50">
                 <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
-                  {mode === "fastener" ? "Fastener Positions:" : "Cut Mark Positions:"}
+                  {mode === "fastener" ? "Fastener Positions:" : mode === "exact" ? "Screw Positions:" : "Cut Mark Positions:"}
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {marks.map((mark, index) => (
@@ -467,6 +606,15 @@ export default function Intervals() {
                   <br />
                   <span className="text-muted-foreground/70">
                     Example: 8" spacing on 96" board with 1" offsets = 12 fasteners from 1" to 89"
+                  </span>
+                </>
+              ) : mode === "exact" ? (
+                <>
+                  <strong className="text-foreground">Exact Count:</strong> Place a specific number of screws evenly spaced on a board.
+                  Enter board length, edge offset, and number of screws. The calculator will determine the spacing.
+                  <br />
+                  <span className="text-muted-foreground/70">
+                    Example: 30 3/8" board, 4" offset, 5 screws = screws at 4", 9 9/16", 15 1/8", 20 11/16", 26 3/8"
                   </span>
                 </>
               ) : (

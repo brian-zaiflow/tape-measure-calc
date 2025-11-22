@@ -537,6 +537,248 @@ describe('Intervals Calculator - Spacing Mode', () => {
   });
 });
 
+describe('Intervals Calculator - Exact Count Mode', () => {
+  it('places 5 screws on 30 3/8" board with 4" offset', () => {
+    // User's example: 30 3/8" board, 4" offset, 5 screws
+    const boardLength = '30 3/8"';
+    const offset = '4"';
+    const numScrews = 5;
+
+    const boardParsed = parseInput(boardLength);
+    const offsetParsed = parseInput(offset);
+
+    if (!boardParsed || !offsetParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const boardInches = toDecimalInches(boardParsed);
+    const offsetInches = toDecimalInches(offsetParsed);
+
+    expect(boardInches).toBe(30.375);
+    expect(offsetInches).toBe(4);
+
+    // Calculate positions
+    const firstPosition = offsetInches;
+    const lastPosition = boardInches - offsetInches;
+    const span = lastPosition - firstPosition;
+    const numIntervals = numScrews - 1;
+    const actualSpacing = span / numIntervals;
+
+    expect(firstPosition).toBe(4);
+    expect(lastPosition).toBe(26.375);
+    expect(span).toBe(22.375);
+    expect(numIntervals).toBe(4);
+    expect(actualSpacing).toBe(5.59375); // 22.375 / 4
+
+    // Generate screw positions
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i < numScrews; i++) {
+      const position = firstPosition + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(5);
+    expect(formatImperialMeasurement(marks[0])).toBe('4"');
+    // 4 + 5.59375 = 9.59375 → rounds to 9 5/8" (9.625)
+    expect(formatImperialMeasurement(marks[1])).toBe('9 5/8"');
+    // 4 + 11.1875 = 15.1875 → rounds to 15 3/16" (15.1875 exact)
+    expect(formatImperialMeasurement(marks[2])).toBe('15 3/16"');
+    // 4 + 16.78125 = 20.78125 → rounds to 20 13/16" (20.8125)
+    expect(formatImperialMeasurement(marks[3])).toBe('20 13/16"');
+    expect(formatImperialMeasurement(marks[4])).toBe('26 3/8"');
+  });
+
+  it('places 3 screws on 48" board with 2" offset', () => {
+    const boardLength = '48"';
+    const offset = '2"';
+    const numScrews = 3;
+
+    const boardParsed = parseInput(boardLength);
+    const offsetParsed = parseInput(offset);
+
+    if (!boardParsed || !offsetParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const boardInches = toDecimalInches(boardParsed);
+    const offsetInches = toDecimalInches(offsetParsed);
+
+    const firstPosition = offsetInches;
+    const lastPosition = boardInches - offsetInches;
+    const span = lastPosition - firstPosition;
+    const numIntervals = numScrews - 1;
+    const actualSpacing = span / numIntervals;
+
+    expect(firstPosition).toBe(2);
+    expect(lastPosition).toBe(46);
+    expect(span).toBe(44);
+    expect(numIntervals).toBe(2);
+    expect(actualSpacing).toBe(22);
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i < numScrews; i++) {
+      const position = firstPosition + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(3);
+    expect(formatImperialMeasurement(marks[0])).toBe('2"');
+    expect(formatImperialMeasurement(marks[1])).toBe('24"');
+    expect(formatImperialMeasurement(marks[2])).toBe('46"');
+  });
+
+  it('places 10 screws on 96" board with 1" offset', () => {
+    const boardLength = '96"';
+    const offset = '1"';
+    const numScrews = 10;
+
+    const boardParsed = parseInput(boardLength);
+    const offsetParsed = parseInput(offset);
+
+    if (!boardParsed || !offsetParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const boardInches = toDecimalInches(boardParsed);
+    const offsetInches = toDecimalInches(offsetParsed);
+
+    const firstPosition = offsetInches;
+    const lastPosition = boardInches - offsetInches;
+    const span = lastPosition - firstPosition;
+    const numIntervals = numScrews - 1;
+    const actualSpacing = span / numIntervals;
+
+    expect(firstPosition).toBe(1);
+    expect(lastPosition).toBe(95);
+    expect(span).toBe(94);
+    expect(numIntervals).toBe(9);
+    expect(actualSpacing).toBeCloseTo(10.444444, 4);
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i < numScrews; i++) {
+      const position = firstPosition + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(10);
+    expect(formatImperialMeasurement(marks[0])).toBe('1"');
+    expect(formatImperialMeasurement(marks[9])).toBe('95"');
+  });
+
+  it('handles 2 screws (minimum)', () => {
+    const boardLength = '24"';
+    const offset = '3"';
+    const numScrews = 2;
+
+    const boardParsed = parseInput(boardLength);
+    const offsetParsed = parseInput(offset);
+
+    if (!boardParsed || !offsetParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const boardInches = toDecimalInches(boardParsed);
+    const offsetInches = toDecimalInches(offsetParsed);
+
+    const firstPosition = offsetInches;
+    const lastPosition = boardInches - offsetInches;
+    const span = lastPosition - firstPosition;
+    const numIntervals = numScrews - 1;
+    const actualSpacing = span / numIntervals;
+
+    expect(span).toBe(18);
+    expect(numIntervals).toBe(1);
+    expect(actualSpacing).toBe(18);
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i < numScrews; i++) {
+      const position = firstPosition + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(2);
+    expect(formatImperialMeasurement(marks[0])).toBe('3"');
+    expect(formatImperialMeasurement(marks[1])).toBe('21"');
+  });
+
+  it('handles fractional board length and offset', () => {
+    const boardLength = '48 1/2"';
+    const offset = '1 1/4"';
+    const numScrews = 4;
+
+    const boardParsed = parseInput(boardLength);
+    const offsetParsed = parseInput(offset);
+
+    if (!boardParsed || !offsetParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const boardInches = toDecimalInches(boardParsed);
+    const offsetInches = toDecimalInches(offsetParsed);
+
+    expect(boardInches).toBe(48.5);
+    expect(offsetInches).toBe(1.25);
+
+    const firstPosition = offsetInches;
+    const lastPosition = boardInches - offsetInches;
+    const span = lastPosition - firstPosition;
+    const numIntervals = numScrews - 1;
+    const actualSpacing = span / numIntervals;
+
+    expect(span).toBe(46);
+    expect(numIntervals).toBe(3);
+    expect(actualSpacing).toBeCloseTo(15.333333, 4);
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i < numScrews; i++) {
+      const position = firstPosition + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(4);
+    expect(formatImperialMeasurement(marks[0])).toBe('1 1/4"');
+    expect(formatImperialMeasurement(marks[3])).toBe('47 1/4"');
+  });
+
+  it('handles larger number of screws', () => {
+    const boardLength = '8\''; // 96"
+    const offset = '2"';
+    const numScrews = 25;
+
+    const boardParsed = parseInput(boardLength);
+    const offsetParsed = parseInput(offset);
+
+    if (!boardParsed || !offsetParsed) {
+      throw new Error('Failed to parse input');
+    }
+
+    const boardInches = toDecimalInches(boardParsed);
+    const offsetInches = toDecimalInches(offsetParsed);
+
+    expect(boardInches).toBe(96);
+
+    const firstPosition = offsetInches;
+    const lastPosition = boardInches - offsetInches;
+    const span = lastPosition - firstPosition;
+    const numIntervals = numScrews - 1;
+    const actualSpacing = span / numIntervals;
+
+    expect(span).toBe(92);
+    expect(numIntervals).toBe(24);
+    expect(actualSpacing).toBeCloseTo(3.833333, 4);
+
+    const marks: ImperialMeasurement[] = [];
+    for (let i = 0; i < numScrews; i++) {
+      const position = firstPosition + (actualSpacing * i);
+      marks.push(toImperialMeasurement(position));
+    }
+
+    expect(marks).toHaveLength(25);
+    expect(formatImperialMeasurement(marks[0])).toBe('2"');
+    expect(formatImperialMeasurement(marks[24])).toBe('94"');
+  });
+});
+
 describe('Intervals Calculator - Edge Cases', () => {
   it('handles division by 1', () => {
     const totalLength = '48"';
